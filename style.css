@@ -4,11 +4,12 @@ body {
     flex-direction: column;
     align-items: center;
     margin: 0;
-    padding: 8px;
+    padding: 6px 8px;
     background-color: #f4f4f9;
-    gap: 6px;
+    gap: 4px;
     box-sizing: border-box;
     min-height: 100vh;
+    overflow-y: auto;
 }
 
 #generate-btn {
@@ -67,8 +68,8 @@ body {
     grid-template-rows: repeat(9, 1fr);
     border: 3px solid #333;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: min(100%, 85vw);
-    max-width: 400px;
+    width: min(100%, 80vw);
+    max-width: 340px;
     aspect-ratio: 1;
     touch-action: manipulation;
 }
@@ -196,21 +197,21 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    max-width: 400px;
+    max-width: 340px;
 }
 
 .controls-panel {
     width: 100%;
-    padding: 10px;
+    padding: 8px;
     background-color: #f9f9f9;
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     box-sizing: border-box;
 }
 
@@ -223,29 +224,29 @@ body {
 .button-row {
     display: grid;
     grid-template-columns: repeat(9, 1fr);
-    gap: 3px;
+    gap: 2px;
 }
 
 .utility-row {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 6px;
-    margin-top: 4px;
+    gap: 4px;
+    margin-top: 2px;
     flex-wrap: wrap;
 }
 
 .kbd-btn {
-    padding: 10px 6px;
-    font-size: 15px;
+    padding: 8px 4px;
+    font-size: 14px;
     font-weight: bold;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.1s ease;
     width: 100%;
     box-sizing: border-box;
     touch-action: manipulation;
-    min-height: 40px;
+    min-height: 36px;
 }
 
 /* 輸入答案按鈕 - 藍色系 */
@@ -341,23 +342,23 @@ body {
 /* 手機優化 */
 @media (max-width: 600px) {
     body {
-        padding: 4px;
-        gap: 4px;
+        padding: 4px 6px;
+        gap: 3px;
     }
     
     .grid-container {
-        width: 90vw;
-        max-width: 360px;
+        width: 88vw;
+        max-width: 320px;
     }
     
     .main-layout {
-        gap: 8px;
-        max-width: 360px;
+        gap: 6px;
+        max-width: 320px;
     }
     
     .controls-panel {
-        padding: 8px;
-        gap: 6px;
+        padding: 6px;
+        gap: 4px;
     }
     
     .button-row {
@@ -365,47 +366,65 @@ body {
     }
     
     .kbd-btn {
-        padding: 8px 4px;
-        font-size: 14px;
-        min-height: 38px;
+        padding: 7px 3px;
+        font-size: 13px;
+        min-height: 34px;
     }
     
     .utility-row {
-        gap: 4px;
-        margin-top: 2px;
+        gap: 3px;
+        margin-top: 0px;
     }
     
     .controls-label {
-        font-size: 12px;
-    }
-    
-    #status {
         font-size: 11px;
     }
     
+    #status {
+        font-size: 10px;
+    }
+    
     #generate-btn {
-        padding: 10px 18px;
-        font-size: 14px;
-        min-height: 40px;
+        padding: 8px 16px;
+        font-size: 13px;
+        min-height: 36px;
+    }
+    
+    #timer {
+        font-size: 14px !important;
     }
 }
 
 @media (max-width: 400px) {
     body {
-        padding: 4px;
+        padding: 3px 4px;
+    }
+    
+    .grid-container {
+        width: 90vw;
+        max-width: 300px;
+    }
+    
+    .main-layout {
+        max-width: 300px;
     }
     
     .kbd-btn {
-        padding: 8px 4px;
-        font-size: 13px;
+        padding: 6px 2px;
+        font-size: 12px;
+        min-height: 32px;
     }
     
     .note-cell {
-        font-size: 10px;
+        font-size: 9px;
     }
     
     .notes-container {
         padding: 0px;
         gap: 0px;
+    }
+    
+    .controls-panel {
+        padding: 5px;
     }
 }
