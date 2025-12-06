@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>回溯法數獨生成器</title>
+    <title>Caesar Fung 的數獨遊戲</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap: wrap; width: 100%; justify-content: center;">
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap: wrap; max-width: 400px; width: 100%;">
         <button id="generate-btn">🔄 新遊戲</button>
         <span id="timer" style="font-size:16px; font-weight:bold; color:#007bff;">⏱️ 00:00</span>
-        <span id="status" aria-live="polite" style="margin-left:8px"></span>
-        <span style="margin-left:auto;">❌ <span id="error-count" style="color:#333;">3</span>/3</span>
+        <span id="status" aria-live="polite" style="flex: 1; text-align: center;"></span>
+        <span style="white-space: nowrap;">❌ <span id="error-count" style="color:#333;">3</span>/3</span>
     </div>
     <div class="main-layout">
         <div id="sudoku-grid" class="grid-container"></div>
