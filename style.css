@@ -4,12 +4,13 @@ body {
     flex-direction: column;
     align-items: center;
     margin: 0;
-    padding: 6px 8px;
+    padding: 6px 8px 80px 8px;
     background-color: #f4f4f9;
     gap: 4px;
     box-sizing: border-box;
     min-height: 100vh;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 #generate-btn {
@@ -192,7 +193,6 @@ body {
     font-size: 14px;
     color: #555;
 }
-
 .main-layout {
     display: flex;
     flex-direction: column;
@@ -200,6 +200,7 @@ body {
     gap: 8px;
     width: 100%;
     max-width: 340px;
+    position: relative;
 }
 
 .controls-panel {
@@ -213,6 +214,9 @@ body {
     flex-direction: column;
     gap: 6px;
     box-sizing: border-box;
+    position: relative;
+    z-index: 1;
+}   box-sizing: border-box;
 }
 
 .controls-label {
