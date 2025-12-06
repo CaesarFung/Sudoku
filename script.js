@@ -13,6 +13,27 @@ const generateBtn = document.getElementById('generate-btn');
 const statusSpan = document.getElementById('status');
 const errorCountSpan = document.getElementById('error-count');
 const timerSpan = document.getElementById('timer');
+const consoleToast = document.getElementById('console-toast');
+
+// Toast 訊息顯示函數
+let toastTimeout = null;
+function showToast(message) {
+    console.log(message); // 保留原本的 console.log
+    
+    // 清除之前的 timeout
+    if (toastTimeout) {
+        clearTimeout(toastTimeout);
+    }
+    
+    // 顯示新訊息
+    consoleToast.textContent = message;
+    consoleToast.classList.add('show');
+    
+    // 3秒後消失
+    toastTimeout = setTimeout(() => {
+        consoleToast.classList.remove('show');
+    }, 3000);
+}
 
 // 遊戲狀態
 let selectedCell = null; // { row, col }
@@ -269,7 +290,6 @@ function renderGrid(puzzle) {
                 // 給定的提示數字
                 cell.textContent = value;
                 cell.classList.add('given');
-                cell.style.cursor = 'pointer';
                 cell.addEventListener('click', () => selectCell(r, c));
             } else {
                 // 空白格：顯示候選數字區域或輸入值
@@ -279,15 +299,13 @@ function renderGrid(puzzle) {
                 // 建立 1-9 候選數字，預設隱藏
                 for (let num = 1; num <= 9; num++) {
                     const noteCell = document.createElement('div');
-                    noteCell.className = 'note-cell';
+                    noteCell.className = 'note-cell hidden';
                     noteCell.textContent = num;
                     noteCell.dataset.num = num;
-                    noteCell.style.display = 'none'; // 預設隱藏，點選後由 updateCellDisplay 根據 candidates 顯示
                     notesDiv.appendChild(noteCell);
                 }
                 
                 cell.appendChild(notesDiv);
-                cell.style.cursor = 'pointer';
                 cell.addEventListener('click', () => selectCell(r, c));
             }
             
@@ -297,7 +315,7 @@ function renderGrid(puzzle) {
 }
 
 // 選擇格子
-function selectCell(row, col) {
+function selectCell(row, col, keepHints = false) {
     // 移除前一個選擇的高亮
     if (selectedCell) {
         const prevCell = gridContainer.querySelector(`[data-row="${selectedCell.row}"][data-col="${selectedCell.col}"]`);
@@ -305,8 +323,11 @@ function selectCell(row, col) {
     }
     
     // 移除所有提示邊框和相關提示（點選其他格子時）
-    document.querySelectorAll('.cell.hint-border').forEach(c => c.classList.remove('hint-border'));
-    document.querySelectorAll('.cell.hint-related').forEach(c => c.classList.remove('hint-related'));
+    // 但如果是提示功能調用，則保留提示樣式
+    if (!keepHints) {
+        document.querySelectorAll('.cell.hint-border').forEach(c => c.classList.remove('hint-border'));
+        document.querySelectorAll('.cell.hint-related').forEach(c => c.classList.remove('hint-related'));
+    }
     
     // 設置新選擇
     selectedCell = { row, col };
@@ -345,17 +366,10 @@ function updateHighlights() {
     const cells = gridContainer.querySelectorAll('.cell');
     cells.forEach(cell => {
         cell.classList.remove('highlight-related', 'highlight-same');
-        cell.style.outline = '';
-        cell.style.backgroundColor = '';
-        cell.style.boxShadow = '';
     });
     const noteCells = gridContainer.querySelectorAll('.note-cell');
     noteCells.forEach(n => {
         n.classList.remove('highlight-same-candidate');
-        n.style.backgroundColor = '';
-        n.style.boxShadow = '';
-        n.style.fontWeight = '';
-        // 不清空 color，保持原有的透明/藍色設定
     });
 
     if (!selectedCell) {
@@ -385,9 +399,6 @@ function updateHighlights() {
             const cellValue = cell.classList.contains('given') ? grid[r][c] : userInput[r][c];
             if (cellValue === selectedValue) {
                 cell.classList.add('highlight-same');
-                cell.style.backgroundColor = '#ffe6b8';
-                cell.style.outline = '';
-                cell.style.boxShadow = '';
             }
         }
     });
@@ -402,8 +413,6 @@ function updateHighlights() {
                         const note = notesDiv.querySelector(`.note-cell[data-num="${selectedValue}"]`);
                         if (note) {
                             note.classList.add('highlight-same-candidate');
-                            note.style.backgroundColor = 'transparent';
-                            note.style.boxShadow = '';
                         }
                     }
                 }
@@ -450,27 +459,24 @@ function updateCellDisplay(row, col) {
     });
     if (value !== 0) {
         // 有主答案，隱藏 notesDiv，顯示主答案
-        notesDiv.style.display = 'none';
+        notesDiv.classList.add('hidden');
         if (!cell.contains(notesDiv)) {
             cell.appendChild(notesDiv);
         }
         cell.insertBefore(document.createTextNode(value), notesDiv);
     } else {
         // 沒主答案，永遠顯示 notesDiv
-        notesDiv.style.display = 'grid';
+        notesDiv.classList.remove('hidden');
         if (!cell.contains(notesDiv)) {
             cell.appendChild(notesDiv);
         }
         const noteCells = notesDiv.querySelectorAll('.note-cell');
         noteCells.forEach(noteCell => {
             const num = parseInt(noteCell.dataset.num);
-            // 先確保 note-cell 顯示（移除 display:none）
-            noteCell.style.display = '';
-            if (candidates[row][col].has(num)) {
-                noteCell.style.color = '#999';
-            } else {
-                noteCell.style.color = 'transparent';
-            }
+            const isCandidate = candidates[row][col].has(num);
+            noteCell.classList.remove('hidden');
+            noteCell.classList.toggle('active-candidate', isCandidate);
+            noteCell.classList.toggle('inactive', !isCandidate);
         });
     }
 }
@@ -486,9 +492,9 @@ function updateErrorDisplay() {
         errorCountSpan.textContent = errorCount;
         // 有錯誤時顯示為紅字
         if (errorCount > 0) {
-            errorCountSpan.style.color = '#e74c3c';
+            errorCountSpan.classList.add('has-error');
         } else {
-            errorCountSpan.style.color = '#333';
+            errorCountSpan.classList.remove('has-error');
         }
     }
     if (errorCount >= 3 && !gameOver) {
@@ -893,17 +899,17 @@ if (hintBtn) {
             const { row, col } = randomCell;
             const onlyCandidate = Array.from(calculatedCandidates[row][col])[0];
             
-            console.log('=== 提示：Naked Single ===');
-            console.log(`位置：第 ${row + 1} 行，第 ${col + 1} 列`);
-            console.log(`這個格子的候選數字只剩一個：${onlyCandidate}`);
-            console.log(`因此答案必定是 ${onlyCandidate}`);
+            const nakedMsg = `=== 提示：Naked Single ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n這個格子的候選數字只剩一個：${onlyCandidate}\n因此答案必定是 ${onlyCandidate}`;
+            showToast(nakedMsg);
             
             hintCells.add(`${row}-${col}`);
-            selectCell(row, col);
+            
+            // 先添加樣式再 selectCell
             const cell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
             if (cell) {
                 cell.classList.add('hint-border');
             }
+            selectCell(row, col, true);
             hintsUsed++;
             hintCountSpan.textContent = hintsUsed;
             return;
@@ -976,15 +982,10 @@ if (hintBtn) {
             const randomCell = uniqueCells[Math.floor(Math.random() * uniqueCells.length)];
             const { row, col, num, type } = randomCell;
             
-            console.log('=== 提示：Hidden Single ===');
-            console.log(`位置：第 ${row + 1} 行，第 ${col + 1} 列`);
-            console.log(`數字 ${num} 在此${type === 'row' ? '行' : type === 'col' ? '列' : '3x3區塊'}中只能填在這個位置`);
-            console.log(`範圍：${type === 'row' ? `第 ${row + 1} 行` : type === 'col' ? `第 ${col + 1} 列` : `第 ${Math.floor(row / 3) + 1} 行 ${Math.floor(col / 3) + 1} 列的區塊`}`);
-            console.log(`其他位置都因為已有數字或衝突而無法填 ${num}`);
-            console.log(`淡黃色背景：相關的${type === 'row' ? '同行' : type === 'col' ? '同列' : '同區塊'}格子`);
+            const hiddenMsg = `=== 提示：Hidden Single ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n數字 ${num} 在此${type === 'row' ? '行' : type === 'col' ? '列' : '3x3區塊'}中只能填在這個位置\n淡黃色背景：相關的${type === 'row' ? '同行' : type === 'col' ? '同列' : '同區塊'}格子`;
+            showToast(hiddenMsg);
             
             hintCells.add(`${row}-${col}`);
-            selectCell(row, col);
             
             // 主要提示格子
             const mainCell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
@@ -1023,6 +1024,9 @@ if (hintBtn) {
                 }
             }
             
+            // 最後才 selectCell，並保留提示樣式
+            selectCell(row, col, true);
+            
             hintsUsed++;
             hintCountSpan.textContent = hintsUsed;
             return;
@@ -1052,18 +1056,17 @@ if (hintBtn) {
             const { row, col } = randomCell;
             const candidates = Array.from(calculatedCandidates[row][col]).sort((a, b) => a - b);
             
-            console.log('=== 提示：最少候選數字 ===');
-            console.log(`位置：第 ${row + 1} 行，第 ${col + 1} 列`);
-            console.log(`這個格子目前有 ${candidates.length} 個可能的候選數字：${candidates.join(', ')}`);
-            console.log('這是目前候選數字最少的格子之一');
-            console.log('建議：嘗試用排除法或檢查同行/列/區塊來縮小範圍');
+            const minCandMsg = `=== 提示：最少候選數字 ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n這個格子目前有 ${candidates.length} 個候選：${candidates.join(', ')}\n建議：用排除法縮小範圍`;
+            showToast(minCandMsg);
             
             hintCells.add(`${row}-${col}`);
-            selectCell(row, col);
+            
+            // 先添加樣式再 selectCell
             const cell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
             if (cell) {
                 cell.classList.add('hint-border');
             }
+            selectCell(row, col, true);
             hintsUsed++;
             hintCountSpan.textContent = hintsUsed;
             return;

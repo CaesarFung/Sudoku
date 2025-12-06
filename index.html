@@ -7,11 +7,11 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap: wrap; max-width: 400px; width: 100%;">
-        <button id="generate-btn">🔄 新遊戲</button>
-        <span id="timer" style="font-size:16px; font-weight:bold; color:#007bff;">⏱️ 00:00</span>
-        <span id="status" aria-live="polite" style="flex: 1; text-align: center;"></span>
-        <span style="white-space: nowrap;">❌ <span id="error-count" style="color:#333;">3</span>/3</span>
+    <div class="header-bar">
+        <button id="generate-btn" class="kbd-btn utility-btn">🔄 新遊戲</button>
+        <span id="timer" class="timer-display">⏱️ 00:00</span>
+        <span id="status" aria-live="polite" class="status-display"></span>
+        <span class="error-display">❌ <span id="error-count">3</span>/3</span>
     </div>
     <div class="main-layout">
         <div id="sudoku-grid" class="grid-container"></div>
@@ -47,6 +47,8 @@
             </div>
         </div>
     </div>
+
+    <div id="console-toast" class="console-toast"></div>
 
     <script src="script.js"></script>
 </body>
