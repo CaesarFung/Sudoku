@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>回溯法數獨生成器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>🧩 數獨</h1>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap: wrap;">
+        <button id="generate-btn">🔄 新遊戲</button>
+        <span id="timer" style="font-size:16px; font-weight:bold; color:#007bff;">⏱️ 00:00</span>
+        <span id="status" aria-live="polite" style="margin-left:8px"></span>
+        <span style="margin-left:auto;">❌ <span id="error-count" style="color:#333;">3</span>/3</span>
+    </div>
+    <div class="main-layout">
+        <div id="sudoku-grid" class="grid-container"></div>
+
+        <div class="controls-panel">
+            <div class="button-row answer-row">
+                <button class="kbd-btn answer-btn" data-num="1">1</button>
+                <button class="kbd-btn answer-btn" data-num="2">2</button>
+                <button class="kbd-btn answer-btn" data-num="3">3</button>
+                <button class="kbd-btn answer-btn" data-num="4">4</button>
+                <button class="kbd-btn answer-btn" data-num="5">5</button>
+                <button class="kbd-btn answer-btn" data-num="6">6</button>
+                <button class="kbd-btn answer-btn" data-num="7">7</button>
+                <button class="kbd-btn answer-btn" data-num="8">8</button>
+                <button class="kbd-btn answer-btn" data-num="9">9</button>
+            </div>
+
+            <div class="button-row candidate-row">
+                <button class="kbd-btn candidate-btn" data-num="1">1</button>
+                <button class="kbd-btn candidate-btn" data-num="2">2</button>
+                <button class="kbd-btn candidate-btn" data-num="3">3</button>
+                <button class="kbd-btn candidate-btn" data-num="4">4</button>
+                <button class="kbd-btn candidate-btn" data-num="5">5</button>
+                <button class="kbd-btn candidate-btn" data-num="6">6</button>
+                <button class="kbd-btn candidate-btn" data-num="7">7</button>
+                <button class="kbd-btn candidate-btn" data-num="8">8</button>
+                <button class="kbd-btn candidate-btn" data-num="9">9</button>
+            </div>
+
+            <div class="utility-row">
+                <button id="auto-candidates-btn" class="kbd-btn" style="background-color: #d4f1d4; border-color: #81c784; min-width: 120px;">🤖 自動</button>
+                <button id="hint-btn" class="kbd-btn" style="background-color: #fff3cd; border-color: #ffc107; min-width: 120px;">💡 提示 (<span id="hint-count">0</span>)</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
