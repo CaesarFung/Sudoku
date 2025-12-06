@@ -4,16 +4,16 @@ body {
     flex-direction: column;
     align-items: center;
     margin: 0;
-    padding: 12px;
+    padding: 8px;
     background-color: #f4f4f9;
-    gap: 12px;
+    gap: 8px;
     box-sizing: border-box;
     min-height: 100vh;
 }
 
 h1 {
-    font-size: clamp(20px, 5vw, 28px);
-    margin: 8px 0;
+    font-size: clamp(18px, 4.5vw, 24px);
+    margin: 4px 0;
     text-align: center;
 }
 
@@ -73,7 +73,8 @@ h1 {
     grid-template-rows: repeat(9, 1fr);
     border: 3px solid #333;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: min(100%, 540px);
+    width: min(100%, 85vw);
+    max-width: 400px;
     aspect-ratio: 1;
     touch-action: manipulation;
 }
@@ -201,21 +202,21 @@ h1 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     width: 100%;
-    max-width: 540px;
+    max-width: 400px;
 }
 
 .controls-panel {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     background-color: #f9f9f9;
     border: 1px solid #ddd;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     box-sizing: border-box;
 }
 
@@ -228,21 +229,21 @@ h1 {
 .button-row {
     display: grid;
     grid-template-columns: repeat(9, 1fr);
-    gap: 4px;
+    gap: 3px;
 }
 
 .utility-row {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 8px;
-    margin-top: 6px;
+    gap: 6px;
+    margin-top: 4px;
     flex-wrap: wrap;
 }
 
 .kbd-btn {
-    padding: 12px 8px;
-    font-size: 16px;
+    padding: 10px 6px;
+    font-size: 15px;
     font-weight: bold;
     border-radius: 6px;
     cursor: pointer;
@@ -250,7 +251,7 @@ h1 {
     width: 100%;
     box-sizing: border-box;
     touch-action: manipulation;
-    min-height: 44px;
+    min-height: 40px;
 }
 
 /* 輸入答案按鈕 - 藍色系 */
@@ -346,40 +347,57 @@ h1 {
 /* 手機優化 */
 @media (max-width: 600px) {
     body {
-        padding: 8px;
-        gap: 10px;
-    }
-    
-    .grid-container {
-        width: 100%;
-        max-width: 100vw;
-    }
-    
-    .controls-panel {
-        padding: 10px;
-        gap: 8px;
-    }
-    
-    .button-row {
-        gap: 3px;
-    }
-    
-    .kbd-btn {
-        padding: 10px 6px;
-        font-size: 14px;
-        min-height: 40px;
-    }
-    
-    .utility-row {
+        padding: 6px;
         gap: 6px;
     }
     
+    h1 {
+        font-size: 16px;
+        margin: 2px 0;
+    }
+    
+    .grid-container {
+        width: 90vw;
+        max-width: 360px;
+    }
+    
+    .main-layout {
+        gap: 8px;
+        max-width: 360px;
+    }
+    
+    .controls-panel {
+        padding: 8px;
+        gap: 6px;
+    }
+    
+    .button-row {
+        gap: 2px;
+    }
+    
+    .kbd-btn {
+        padding: 8px 4px;
+        font-size: 14px;
+        min-height: 38px;
+    }
+    
+    .utility-row {
+        gap: 4px;
+        margin-top: 2px;
+    }
+    
     .controls-label {
-        font-size: 13px;
+        font-size: 12px;
     }
     
     #status {
-        font-size: 12px;
+        font-size: 11px;
+    }
+    
+    #generate-btn {
+        padding: 10px 18px;
+        font-size: 14px;
+        min-height: 40px;
     }
 }
 
