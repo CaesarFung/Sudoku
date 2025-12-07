@@ -827,9 +827,6 @@ function updateAllCandidatesDisplay() {
     }
 }
 
-// 初始化時自動生成
-generateNewSudoku(getSelectedDifficulty());
-
 // 綁定事件
 if (generateBtn) generateBtn.addEventListener('click', () => generateNewSudoku(getSelectedDifficulty()));
 
