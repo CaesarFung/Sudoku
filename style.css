@@ -69,23 +69,25 @@ body {
 
 .console-toast {
     position: fixed;
-    bottom: 12px;
+    bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: transparent;
-    color: #666;
-    padding: 8px 16px;
-    border-radius: 6px;
+    display: block;
+    padding: 0;
+    background: transparent;
+    color: #555;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
     font-size: 13px;
     line-height: 1.4;
-    max-width: 85vw;
     z-index: 10000;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
     white-space: pre-line;
-    text-align: left;
+    text-align: center;
     font-weight: normal;
 }
 

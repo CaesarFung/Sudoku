@@ -1579,6 +1579,98 @@ if (hintBtn) {
                             }
                         }
                     }
+
+                    // 策略 3b: Claiming (Line -> Box Reduction)
+                    // 若某行/列的某數字候選只出現在同一個 3x3 區塊內，則可刪除該區塊其他格的該候選
+                    for (let num = 1; num <= 9; num++) {
+                        // 行方向
+                        for (let row = 0; row < N; row++) {
+                            const positions = [];
+                            for (let col = 0; col < N; col++) {
+                                const cellEl = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                                if (userInput[row][col] === 0 && cellEl && !cellEl.classList.contains('given') && calculatedCandidates[row][col].has(num)) {
+                                    positions.push({ row, col });
+                                }
+                            }
+                            if (positions.length >= 2 && positions.length <= 4) {
+                                const boxIdx = Math.floor(positions[0].row / 3) * 3 + Math.floor(positions[0].col / 3);
+                                const sameBox = positions.every(p => (Math.floor(p.row / 3) * 3 + Math.floor(p.col / 3)) === boxIdx);
+                                if (sameBox) {
+                                    const br = Math.floor(boxIdx / 3);
+                                    const bc = boxIdx % 3;
+                                    let related = [];
+                                    for (let r = br * 3; r < br * 3 + 3; r++) {
+                                        for (let c = bc * 3; c < bc * 3 + 3; c++) {
+                                            const isInLine = (r === row);
+                                            const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                                            // 必須實際存在該候選且目前未填，避免浪費提示
+                                            if (!isInLine && userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given') && candidates[r][c].has(num)) {
+                                                related.push(cellEl);
+                                            }
+                                        }
+                                    }
+                                    if (related.length > 0) {
+                                        positions.forEach(({row: r, col: c}) => {
+                                            const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                                            if (cell) cell.classList.add('hint-border');
+                                        });
+                                        related.forEach(cell => cell.classList.add('hint-related'));
+                                        showToast(`=== 提示：Claiming (Line→Box) ===\n數字 ${num} 在第 ${row+1} 行只出現在同一區塊\n可刪除該區塊其他格的 ${num} 候選`);
+                                        selectCell(positions[0].row, positions[0].col, true);
+                                        state.hintsUsed++;
+                                        if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
+                                        if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+                                        saveGame();
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+
+                        // 列方向
+                        for (let col = 0; col < N; col++) {
+                            const positions = [];
+                            for (let row = 0; row < N; row++) {
+                                const cellEl = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                                if (userInput[row][col] === 0 && cellEl && !cellEl.classList.contains('given') && calculatedCandidates[row][col].has(num)) {
+                                    positions.push({ row, col });
+                                }
+                            }
+                            if (positions.length >= 2 && positions.length <= 4) {
+                                const boxIdx = Math.floor(positions[0].row / 3) * 3 + Math.floor(positions[0].col / 3);
+                                const sameBox = positions.every(p => (Math.floor(p.row / 3) * 3 + Math.floor(p.col / 3)) === boxIdx);
+                                if (sameBox) {
+                                    const br = Math.floor(boxIdx / 3);
+                                    const bc = boxIdx % 3;
+                                    let related = [];
+                                    for (let r = br * 3; r < br * 3 + 3; r++) {
+                                        for (let c = bc * 3; c < bc * 3 + 3; c++) {
+                                            const isInLine = (c === col);
+                                            const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                                            // 必須實際存在該候選且目前未填，避免浪費提示
+                                            if (!isInLine && userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given') && candidates[r][c].has(num)) {
+                                                related.push(cellEl);
+                                            }
+                                        }
+                                    }
+                                    if (related.length > 0) {
+                                        positions.forEach(({row: r, col: c}) => {
+                                            const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                                            if (cell) cell.classList.add('hint-border');
+                                        });
+                                        related.forEach(cell => cell.classList.add('hint-related'));
+                                        showToast(`=== 提示：Claiming (Line→Box) ===\n數字 ${num} 在第 ${col+1} 列只出現在同一區塊\n可刪除該區塊其他格的 ${num} 候選`);
+                                        selectCell(positions[0].row, positions[0].col, true);
+                                        state.hintsUsed++;
+                                        if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
+                                        if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+                                        saveGame();
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
             // 去重（可能同一格被多次找到）
             const uniqueCells = [];
             const seen = new Set();
@@ -1808,8 +1900,8 @@ if (hintBtn) {
                 } else if (num2Count.box === 0 && num1Count.box > 0) {
                     hint += `提示：${candidates[1]} 在同區塊無其他位置，應是此格答案`;
                 } else {
-                    // 只有真的無法判斷時才說「觀察周圍」
-                    return; // 不提示，等待更高級提示
+                    // 只有真的無法判斷時也給出提示文字並消耗一次提示
+                    hint += '目前沒有明確排除線索，請觀察同行、同列與同區塊的候選分佈。';
                 }
                 
                 showToast(hint);
@@ -1829,6 +1921,35 @@ if (hintBtn) {
             }
         }
         
+        // Fallback: 選一個候選數最少的可填格（排除 given）提供基本提示，降低無提示情況
+        let fallback = null;
+        let fallbackSize = 10;
+        for (let r = 0; r < N; r++) {
+            for (let c = 0; c < N; c++) {
+                const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                if (userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given')) {
+                    const size = calculatedCandidates[r][c].size;
+                    if (size > 0 && size < fallbackSize) {
+                        fallbackSize = size;
+                        fallback = { row: r, col: c, cands: Array.from(calculatedCandidates[r][c]).sort((a, b) => a - b) };
+                    }
+                }
+            }
+        }
+        if (fallback) {
+            const { row, col, cands } = fallback;
+            const cell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            if (cell) cell.classList.add('hint-border');
+            selectCell(row, col, true);
+            const fallbackMsg = `=== 提示：優先考慮最少候選 ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n候選：${cands.join(', ')}\n嘗試從此處著手，檢查同行列區塊的衝突`; 
+            showToast(fallbackMsg);
+            state.hintsUsed++;
+            if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
+            if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+            saveGame();
+            return;
+        }
+
         // 理論上不應該到這裡（除非遊戲已完成）
         showToast('無法找到可提示的格子！');
     });
