@@ -4,7 +4,7 @@ body {
     flex-direction: column;
     align-items: center;
     margin: 0;
-    padding: 6px 8px 80px 8px;
+    padding: 6px 8px;
     background-color: #f4f4f9;
     gap: 4px;
     box-sizing: border-box;
@@ -13,43 +13,9 @@ body {
     overflow-x: hidden;
 }
 
-.timer-display {
-    font-size: 16px;
-    font-weight: bold;
-    color: #007bff;
-}
-
-.status-display {
-    flex: 1;
-    text-align: center;
-}
-
-.error-display {
-    white-space: nowrap;
-}
-
-#error-count {
-    color: #333;
-}
 
 #error-count.has-error {
     color: #e74c3c;
-}
-
-.utility-btn {
-    background-color: #e3f2fd;
-    border: 1px solid #90caf9;
-    color: #1976d2;
-    min-width: 100px;
-}
-
-.utility-btn:hover {
-    background-color: #bbdefb;
-    border-color: #42a5f5;
-}
-
-.utility-btn:active {
-    background-color: #90caf9;
 }
 
 .loading-overlay {
@@ -63,6 +29,42 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 9999;
+}
+
+.pause-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+    gap: 20px;
+}
+
+.pause-overlay .pause-text {
+    font-size: 48px;
+    color: white;
+}
+
+.pause-overlay .resume-btn {
+    padding: 12px 24px;
+    font-size: 18px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.pause-overlay .resume-btn:hover {
+    background-color: #45a049;
 }
 
 .console-toast {
@@ -179,19 +181,19 @@ body {
 }
 
 .hint-border {
-    border: 3px solid #e74c3c !important;
-    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5) !important;
-    background-color: #fff !important;
+    border: 3px solid #e74c3c;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+    background-color: #fff;
 }
 
 .hint-related {
-    background-color: #fff9e6 !important;
-    border: 2px solid #ffc107 !important;
+    background-color: #fff9e6;
+    border: 2px solid #ffc107;
 }
 
 /* hint-border 的白色背景優先於 hint-related */
 .hint-border.hint-related {
-    background-color: #fff !important;
+    background-color: #fff;
 }
 
 /* 候選數字容器 */
@@ -245,18 +247,17 @@ body {
 }
 
 .cell.highlight-related {
-    background-color: #f0f0f0 !important;
+    background-color: #f0f0f0;
 }
 
 .cell.highlight-same {
-    background-color: #ffe6b8 !important;
+    background-color: #ffe6b8;
 }
 
 .note-cell.highlight-same-candidate {
-    background-color: transparent !important;
-    color: #ffa600 !important;
-    font-weight: bold !important;
-    box-shadow: none !important;
+    background-color: transparent;
+    color: #ffa600;
+    font-weight: bold;
 }
 
 /* 狀態提示 */
@@ -300,25 +301,107 @@ body {
     margin-bottom: 2px;
 }
 
-.controls-label {
-    font-size: 14px;
-    color: #555;
-    margin-top: 4px;
-}
-
 .button-row {
     display: grid;
     grid-template-columns: repeat(9, 1fr);
     gap: 2px;
 }
 
+.icon-btn {
+    padding: 6px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    transition: transform 0.1s ease;
+}
+
+.icon-btn:hover {
+    transform: scale(1.1);
+}
+
+.icon-btn:active {
+    transform: scale(0.95);
+}
+
+.timer-display {
+    font-size: 14px;
+    color: #555;
+    font-weight: 500;
+}
+
+.status-display {
+    font-size: 12px;
+    color: #888;
+    flex: 1;
+    text-align: center;
+}
+
+.error-display {
+    font-size: 12px;
+    color: #555;
+    white-space: nowrap;
+}
+
+.answer-row {
+    /* inherits from .button-row */
+}
+
+.candidate-row {
+    /* inherits from .button-row */
+}
+
 .utility-row {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: 4px;
-    margin-top: 2px;
+    justify-content: space-around;
+    gap: 8px;
+    margin-top: 4px;
     flex-wrap: wrap;
+}
+
+.utility-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    flex: 1;
+    min-width: 50px;
+    transition: all 0.1s ease;
+    position: relative;
+}
+
+.utility-icon-btn:hover {
+    transform: scale(1.1);
+}
+.utility-icon-btn:active {
+    transform: scale(0.95);
+}
+.utility-icon-btn:disabled,
+.utility-icon-btn:disabled:hover {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.utility-icon-btn .icon {
+    font-size: 28px;
+    line-height: 1;
+    position: relative;
+}
+
+.utility-icon-btn .badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+    color: #ff0000;
+    font-size: 15px;
+    font-weight: bold;
+    line-height: 1;
+    pointer-events: none;
 }
 
 .kbd-btn {
@@ -384,50 +467,24 @@ body {
     transform: none;
 }
 
-.kbd-btn.kbd-delete {
-    background-color: #ffcdd2;
-    border-color: #ef9a9a;
-    min-width: 120px;
-}
-
-.kbd-btn.kbd-delete:hover {
-    background-color: #ef9a9a;
-    border-color: #e57373;
-}
-
-.undo-btn {
-    padding: 10px 16px;
-    background-color: #ff9800;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    min-width: 120px;
-}
-
-.undo-btn:hover {
-    background-color: #fb8c00;
-}
-
 .answer-btn.active {
-    background-color: #90caf9 !important;
-    border-color: #1976d2 !important;
-    color: #0d47a1 !important;
+    background-color: #90caf9;
+    border-color: #1976d2;
+    color: #0d47a1;
     font-weight: bold;
 }
 
 .candidate-btn.active {
-    background-color: #bdbdbd !important;
-    border-color: #757575 !important;
-    color: #424242 !important;
+    background-color: #bdbdbd;
+    border-color: #757575;
+    color: #424242;
     font-weight: bold;
 }
 
 /* 手機優化 */
 @media (max-width: 600px) {
     body {
-        padding: 2px 4px 60px 4px;
+        padding: 2px 4px;
         gap: 3px;
     }
     
@@ -448,43 +505,22 @@ body {
         gap: 4px;
     }
     
-    .button-row {
-        gap: 2px;
-    }
-    
-    .kbd-btn {
-        padding: 7px 3px;
-        font-size: 13px;
-        min-height: 34px;
-    }
-    
-    .utility-row {
-        gap: 3px;
-        margin-top: 0px;
-    }
-    
-    .controls-label {
-        font-size: 11px;
-    }
-    
-    #status {
+.button-row {
+    gap: 2px;
+}
+
+.kbd-btn {
+    padding: 7px 3px;
+    font-size: 13px;
+    min-height: 34px;
+}    #status {
         font-size: 10px;
-    }
-    
-    #generate-btn {
-        padding: 8px 16px;
-        font-size: 13px;
-        min-height: 36px;
-    }
-    
-    #timer {
-        font-size: 14px !important;
     }
 }
 
 @media (max-width: 400px) {
     body {
-        padding: 2px 3px 60px 3px;
+        padding: 2px 3px;
     }
     
     .main-layout {

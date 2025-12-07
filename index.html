@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Caesar Fung 的數獨遊戲</title>
+    <title>Caesar的數獨遊戲</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,6 +12,7 @@
 
         <div class="controls-panel">
             <div class="header-row">
+                <button id="pause-btn" class="icon-btn" title="暫停">⏸️</button>
                 <span id="timer" class="timer-display">⏱️ 00:00</span>
                 <span id="status" aria-live="polite" class="status-display"></span>
                 <span class="error-display">❌ <span id="error-count">3</span>/3</span>
@@ -41,9 +42,15 @@
             </div>
 
             <div class="utility-row">
-                <button id="auto-candidates-btn" class="kbd-btn" style="background-color: #d4f1d4; border-color: #81c784; min-width: 120px;">🤖 自動</button>
-                <button id="hint-btn" class="kbd-btn" style="background-color: #fff3cd; border-color: #ffc107; min-width: 120px;">💡 提示 (<span id="hint-count">0</span>)</button>
-                <button id="generate-btn" class="kbd-btn utility-btn">🔄 新遊戲</button>
+                <button id="auto-candidates-btn" class="utility-icon-btn" title="筆記">
+                    <span class="icon">📝</span>
+                </button>
+                <button id="hint-btn" class="utility-icon-btn" title="提示">
+                    <span class="icon">💡<span class="badge" id="hint-count">3</span></span>
+                </button>
+                <button id="generate-btn" class="utility-icon-btn" title="新遊戲">
+                    <span class="icon">🔄</span>
+                </button>
             </div>
         </div>
     </div>
