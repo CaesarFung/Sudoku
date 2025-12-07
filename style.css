@@ -13,16 +13,6 @@ body {
     overflow-x: hidden;
 }
 
-.header-bar {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-    max-width: 360px;
-    width: 100%;
-}
-
 .timer-display {
     font-size: 16px;
     font-weight: bold;
@@ -299,6 +289,17 @@ body {
     margin-top: 8px;
 }
 
+.header-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 100%;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 2px;
+}
+
 .controls-label {
     font-size: 14px;
     color: #555;
@@ -430,10 +431,6 @@ body {
         gap: 3px;
     }
     
-    .header-bar {
-        max-width: 380px;
-    }
-    
     .grid-container {
         width: 96vw;
         max-width: 380px;
@@ -490,7 +487,6 @@ body {
         padding: 2px 3px 60px 3px;
     }
     
-    .header-bar,
     .main-layout {
         max-width: 360px;
     }

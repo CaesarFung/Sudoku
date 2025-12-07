@@ -499,8 +499,8 @@ function updateErrorDisplay() {
     }
     if (errorCount >= 3 && !gameOver) {
         gameOver = true;
-        if (statusSpan) statusSpan.textContent = '遊戲結束！錯誤次數已達上限。';
         setControlsDisabled(true);
+        setTimeout(() => showGameOverDialog(), 500);
     }
 }
 
@@ -529,13 +529,14 @@ function inputNumber(num) {
         
         // 驗證輸入是否正確
         if (!validateInput(row, col, num)) {
-            // 錯誤：顯示紅色，計數器 +1，然後自動還原
+            // 錯誤：整個方框閃紅色，計數器 +1，然後自動還原
             errorCount++;
             updateErrorDisplay();
-            const cell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            if (cell) {
-                cell.style.backgroundColor = '#ffcccc'; // 紅色背景
-            }
+            
+            // 讓整個方框閃紅色
+            gridContainer.style.backgroundColor = '#ff6b6b';
+            gridContainer.style.boxShadow = '0 0 20px rgba(255, 107, 107, 0.8)';
+            
             // 自動還原上一步（移除這次的輸入，恢復候選數字）
             setTimeout(() => {
                 userInput[row][col] = 0;
@@ -545,7 +546,8 @@ function inputNumber(num) {
                 updateButtonStates();
                 updateCandidateButtonStyles(row, col); // 更新候選按鈕樣式
                 // 清除紅色背景
-                if (cell) cell.style.backgroundColor = '';
+                gridContainer.style.backgroundColor = '';
+                gridContainer.style.boxShadow = '';
             }, 800);
             return;
         }
@@ -589,9 +591,8 @@ function isGameComplete() {
     return true;
 }
 
-// 顯示遊戲完成對話框
-function showGameCompleteDialog() {
-    // 停止計時器
+// 顯示遊戲結束對話框（失敗）
+function showGameOverDialog() {
     stopTimer();
     
     const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
@@ -599,7 +600,22 @@ function showGameCompleteDialog() {
     const seconds = elapsed % 60;
     const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    const message = `🎉 恭喜！所有答案都輸入完成了！\n\n⏱️ 用時：${timeStr}\n💡 提示次數：${hintsUsed}\n\n點選確認開始新遊戲`;
+    const message = `❌ 遊戲結束\n\n錯誤次數已達上限 (3/3)\n⏱️ 用時：${timeStr}\n💡 提示次數：${hintsUsed}\n\n點選確認開始新遊戲`;
+    if (confirm(message)) {
+        generateNewSudoku(getSelectedDifficulty());
+    }
+}
+
+// 顯示遊戲完成對話框（成功）
+function showGameCompleteDialog() {
+    stopTimer();
+    
+    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    const message = `🎉 恭喜完成！\n\n⏱️ 用時：${timeStr}\n💡 提示次數：${hintsUsed}\n❌ 錯誤次數：${errorCount}/3\n\n點選確認開始新遊戲`;
     if (confirm(message)) {
         generateNewSudoku(getSelectedDifficulty());
     }
