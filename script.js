@@ -2,10 +2,25 @@
 const N = 9;
 // 數獨網格 (9x9)
 let grid = Array.from({ length: N }, () => Array(N).fill(0));
+// 當前謎題（給定值）；用於恢復與重渲染
+let currentPuzzle = Array.from({ length: N }, () => Array(N).fill(0));
 // 使用者輸入追蹤 (9x9)
 let userInput = Array.from({ length: N }, () => Array(N).fill(0));
 // 候選數字追蹤 (9x9，每格是 Set)
 let candidates = Array.from({ length: N }, () => Array(N).fill(null).map(() => new Set([1,2,3,4,5,6,7,8,9])));
+// 本地儲存鍵與版本
+const STORAGE_KEY = 'sudoku-progress-v1';
+const DIFFICULTY_KEY = 'sudoku-difficulty';
+let globalBestPuzzle = null;
+let globalBestRemoved = 0;
+const DIFFICULTIES = {
+    intro: { label: '入門', removals: 46 },
+    easy: { label: '簡單', removals: 50 },
+    medium: { label: '普通', removals: 52 },
+    hard: { label: '困難', removals: 54 },
+    expert: { label: '地獄', removals: 58 }
+};
+let lastSavedElapsed = null; // 用於節流計時器自動保存
 
 // DOM 元素
 const gridContainer = document.getElementById('sudoku-grid');
@@ -30,7 +45,8 @@ const state = {
     pauseOverlay: null,
     pauseStartTime: null,
     totalPausedTime: 0,
-    toastTimeout: null
+    toastTimeout: null,
+    currentDifficulty: null
 };
 
 function showToast(message) {
@@ -44,6 +60,35 @@ function showToast(message) {
         consoleToast.classList.remove('show');
     }, 3000);
 }
+
+// 難度設定：載入、切換、更新 UI 樣式
+function loadSavedDifficulty() {
+    const saved = localStorage.getItem(DIFFICULTY_KEY);
+    if (saved && DIFFICULTIES[saved]) return saved;
+    return 'intro';
+}
+
+function updateDifficultyButtons() {
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+        const level = btn.dataset.level;
+        btn.classList.toggle('active', level === state.currentDifficulty);
+        btn.setAttribute('aria-pressed', level === state.currentDifficulty ? 'true' : 'false');
+    });
+}
+
+function setDifficulty(level) {
+    if (!DIFFICULTIES[level]) return;
+    state.currentDifficulty = level;
+    try {
+        localStorage.setItem(DIFFICULTY_KEY, level);
+    } catch (err) {
+        console.warn('儲存難度失敗', err);
+    }
+    updateDifficultyButtons();
+}
+
+// 初始化當前難度（第一次使用預設為 easy）
+state.currentDifficulty = loadSavedDifficulty();
 
 // 已集中於 state 物件，移除未用全域變數
 
@@ -193,16 +238,30 @@ function evaluatePuzzleDifficulty(puzzle) {
 
 /**
  * 從完整的網格中移除數字以創建謎題
- * @param {number} difficulty 要移除的格數
+ * @param {number} targetRemovals 要移除的目標格數
  * @param {boolean} ensureUnique 是否檢查並保證唯一解
+ * @param {number} retryCount 重試次數（防守用）
  */
-function createPuzzle(difficulty, ensureUnique = true) {
-    let bestPuzzle = grid.map(row => [...row]);
-    let bestScore = -99999;
-    let bestRemoved = 0;
-    const attempts = 15;
+function createPuzzle(targetRemovals, ensureUnique = true, retryCount = 0) {
+    // 首次呼叫重置全域追蹤
+    if (retryCount === 0) {
+        globalBestPuzzle = null;
+        globalBestRemoved = 0;
+    }
     
-    for (let attempt = 0; attempt < attempts; attempt++) {
+    targetRemovals = Math.min(Math.max(Math.floor(targetRemovals || 45), 0), 81);
+    let bestPuzzle = grid.map(row => [...row]);
+    let bestRemoved = 0;
+    const maxAttempts = 15;
+    let actualAttempts = 0;
+    
+    if (retryCount > 5) {
+        console.warn(`超過重試上限，返回最佳結果 (移除: ${globalBestRemoved}/${targetRemovals})`);
+        return globalBestPuzzle || grid.map(row => [...row]);
+    }
+    
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        actualAttempts++;
         let currentPuzzle = grid.map(row => [...row]);
         let currentRemoved = 0;
         
@@ -228,6 +287,7 @@ function createPuzzle(difficulty, ensureUnique = true) {
 
         for (const [r, c] of positions) {
             if (currentPuzzle[r][c] === 0) continue;
+            if (currentRemoved >= targetRemovals) break;
 
             const value = currentPuzzle[r][c];
             currentPuzzle[r][c] = 0;
@@ -244,16 +304,38 @@ function createPuzzle(difficulty, ensureUnique = true) {
             }
         }
         
-        const difficultyScore = evaluatePuzzleDifficulty(currentPuzzle);
-        
-        if (difficultyScore > bestScore) {
-            bestScore = difficultyScore;
+        if (currentRemoved > bestRemoved) {
             bestRemoved = currentRemoved;
             bestPuzzle = currentPuzzle.map(row => [...row]);
+            
+            // 追蹤全域最佳結果
+            if (currentRemoved > globalBestRemoved) {
+                globalBestRemoved = currentRemoved;
+                globalBestPuzzle = currentPuzzle.map(row => [...row]);
+            }
+            
+            // 達到目標移除格數，提前結束
+            if (currentRemoved >= targetRemovals) {
+                break;
+            }
         }
     }
+    
+    // 更新全域最佳結果
+    if (bestRemoved > globalBestRemoved) {
+        globalBestRemoved = bestRemoved;
+        globalBestPuzzle = bestPuzzle.map(row => [...row]);
+    }
+    
+    // 如果未達到目標移除格數，重新生成新的完整網格並再次嘗試
+    if (bestRemoved < targetRemovals) {
+        console.log(`未達標 (移除: ${bestRemoved}/${targetRemovals})，重新生成...`);
+        grid = Array.from({ length: N }, () => Array(N).fill(0));
+        fillGrid(0, 0);
+        return createPuzzle(targetRemovals, ensureUnique, retryCount + 1);
+    }
 
-    console.log(`難度分數: ${bestScore}, 移除: ${bestRemoved}, 剩餘: ${81 - bestRemoved} (嘗試${attempts}次)`);
+    console.log(`移除: ${bestRemoved}/${targetRemovals} (嘗試${actualAttempts}次)`);
     return bestPuzzle;
 }
 
@@ -512,6 +594,7 @@ function inputNumber(num) {
         }
         updateCellDisplay(row, col);
         updateCandidateButtonStyles(row, col); // 更新按鈕樣式
+        saveGame();
     } else {
         // 普通模式：設置值（清空候選數字）
         
@@ -542,6 +625,7 @@ function inputNumber(num) {
                 // 清除紅色背景
                 gridContainer.style.backgroundColor = '';
                 gridContainer.style.boxShadow = '';
+                saveGame();
             }, 800);
             return;
         }
@@ -558,6 +642,8 @@ function inputNumber(num) {
         
         // 清除候選按鈕的高亮（因為該格子已有值，不再有候選數字）
         updateCandidateButtonStyles(row, col);
+
+        saveGame();
         
         // 檢查遊戲是否完成
         if (isGameComplete()) {
@@ -568,7 +654,8 @@ function inputNumber(num) {
 }
 
 function getSelectedDifficulty() {
-    return 75;
+    const key = state.currentDifficulty && DIFFICULTIES[state.currentDifficulty] ? state.currentDifficulty : 'intro';
+    return DIFFICULTIES[key].removals;
 }
 
 // 檢查遊戲是否完成（所有空白格都已填完）
@@ -653,9 +740,11 @@ function updateButtonStates() {
 }
 
 // 計時器函數
-function startTimer() {
+function startTimer(initialElapsedSeconds = 0) {
     stopTimer();
-    state.gameStartTime = Date.now();
+    const elapsedMs = initialElapsedSeconds * 1000;
+    // gameStartTime 往前推算，確保重載時計時器能延續原本累積時間
+    state.gameStartTime = Date.now() - elapsedMs - state.totalPausedTime;
     state.timerInterval = setInterval(updateTimer, 1000);
     updateTimer();
 }
@@ -679,6 +768,7 @@ function pauseGame() {
     `;
     document.body.appendChild(state.pauseOverlay);
     state.pauseOverlay.querySelector('.resume-btn').addEventListener('click', resumeGame);
+    saveGame();
 }
 
 function resumeGame() {
@@ -691,6 +781,7 @@ function resumeGame() {
         state.pauseOverlay = null;
     }
     updateTimer();
+    saveGame();
 }
 
 function updateTimer() {
@@ -700,6 +791,114 @@ function updateTimer() {
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
     timerSpan.textContent = `⏱️ ${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    // 每 10 秒自動儲存一次，避免空轉時進度未寫入
+    if (elapsed !== lastSavedElapsed && elapsed % 10 === 0) {
+        saveGame();
+        lastSavedElapsed = elapsed;
+    }
+}
+
+// --- 儲存 / 載入遊戲進度 ---
+function serializeCandidates() {
+    return candidates.map(row => row.map(set => Array.from(set)));
+}
+
+function hydrateCandidates(raw) {
+    candidates = Array.from({ length: N }, (_, r) => Array.from({ length: N }, (_, c) => new Set(Array.isArray(raw?.[r]?.[c]) ? raw[r][c] : [])));
+}
+
+function saveGame() {
+    try {
+        const currentPausedTime = (state.isPaused && state.pauseStartTime) ? (Date.now() - state.pauseStartTime) : 0;
+        const data = {
+            version: 1,
+            timestamp: Date.now(),
+            grid,
+            puzzle: currentPuzzle,
+            userInput,
+            candidates: serializeCandidates(),
+            errorCount: state.errorCount,
+            hintsUsed: state.hintsUsed,
+            hintCells: Array.from(state.hintCells),
+            gameOver: state.gameOver,
+            elapsedSeconds: state.gameStartTime ? Math.floor((Date.now() - state.gameStartTime - state.totalPausedTime - currentPausedTime) / 1000) : 0,
+            totalPausedTime: state.totalPausedTime + currentPausedTime,
+            isPaused: state.isPaused
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (err) {
+        console.warn('儲存進度失敗', err);
+    }
+}
+
+function clearSavedGame() {
+    try {
+        localStorage.removeItem(STORAGE_KEY);
+    } catch (err) {
+        console.warn('清除進度失敗', err);
+    }
+}
+
+function loadGame() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (data.version !== 1) return false;
+        if (!Array.isArray(data.puzzle) || data.puzzle.length !== N) return false;
+        if (!Array.isArray(data.grid) || data.grid.length !== N) return false;
+        if (!Array.isArray(data.userInput) || data.userInput.length !== N) return false;
+
+        const savedUserInput = data.userInput.map(row => [...row]);
+        const savedCandidates = data.candidates;
+
+        currentPuzzle = data.puzzle.map(row => [...row]);
+        grid = data.grid.map(row => [...row]);
+
+        renderGrid(currentPuzzle);
+        state.selectedCell = null;
+
+        // 還原使用者輸入與候選數字
+        userInput = savedUserInput.map(row => [...row]);
+        hydrateCandidates(savedCandidates);
+        updateAllCandidatesDisplay();
+        updateButtonStates();
+
+        // 恢復狀態
+        state.errorCount = data.errorCount || 0;
+        state.hintsUsed = data.hintsUsed || 0;
+        state.hintCells = new Set(data.hintCells || []);
+        state.gameOver = !!data.gameOver;
+        state.isPaused = !!data.isPaused;
+        state.pauseStartTime = state.isPaused ? Date.now() : null;
+        state.totalPausedTime = data.totalPausedTime || 0;
+        updateErrorDisplay();
+        if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
+        if (hintBtn) hintBtn.disabled = state.hintsUsed >= 3;
+
+        // 重啟計時器（以保存的 elapsedSeconds 為基準）
+        const elapsedSeconds = data.elapsedSeconds || 0;
+        lastSavedElapsed = elapsedSeconds;
+        startTimer(elapsedSeconds);
+
+        // 若載入時處於暫停狀態，重建暫停遮罩但不重複儲存
+        if (state.isPaused) {
+            state.pauseOverlay = document.createElement('div');
+            state.pauseOverlay.className = 'pause-overlay';
+            state.pauseOverlay.innerHTML = `
+                <div class="pause-text">⏸️ 已暫停</div>
+                <button class="resume-btn">▶️ 繼續遊戲</button>
+            `;
+            document.body.appendChild(state.pauseOverlay);
+            state.pauseOverlay.querySelector('.resume-btn').addEventListener('click', resumeGame);
+        }
+
+        return true;
+    } catch (err) {
+        console.warn('載入進度失敗', err);
+        return false;
+    }
 }
 
 // 非同步生成，讓 UI 可以更新狀態提示（始終使用唯一解檢查）
@@ -717,14 +916,16 @@ async function generateNewSudoku(difficulty = getSelectedDifficulty()) {
         // 讓瀏覽器有機會更新 UI
         await new Promise(resolve => setTimeout(resolve, 20));
 
-        // 初始化並產生完整解
-            grid = Array.from({ length: N }, () => Array(N).fill(0));
-            userInput = Array.from({ length: N }, () => Array(N).fill(0));
-            candidates = Array.from({ length: N }, () => Array(N).fill(null).map(() => new Set([1,2,3,4,5,6,7,8,9])));
+        // 清除舊進度並初始化資料
+        clearSavedGame();
+        grid = Array.from({ length: N }, () => Array(N).fill(0));
+        userInput = Array.from({ length: N }, () => Array(N).fill(0));
+        candidates = Array.from({ length: N }, () => Array(N).fill(null).map(() => new Set([1,2,3,4,5,6,7,8,9])));
         fillGrid(0, 0);
 
         // 建立謎題（始終檢查唯一解）
         const puzzle = createPuzzle(difficulty, true);
+        currentPuzzle = puzzle.map(row => [...row]);
 
         renderGrid(puzzle);
         // 不在遊戲初始化時填充候選數字，只在玩家點選"自動填入"按鈕時才填充
@@ -738,6 +939,7 @@ async function generateNewSudoku(difficulty = getSelectedDifficulty()) {
         state.isPaused = false;
         state.pauseStartTime = null;
         state.totalPausedTime = 0;
+        lastSavedElapsed = null;
         if (state.pauseOverlay) {
             state.pauseOverlay.remove();
             state.pauseOverlay = null;
@@ -750,6 +952,9 @@ async function generateNewSudoku(difficulty = getSelectedDifficulty()) {
         
         // 啟動計時器
         startTimer();
+
+        // 初始狀態即刻儲存
+        saveGame();
     } finally {
         // 移除全螢幕讀條
         const overlay = document.querySelector('.loading-overlay');
@@ -856,6 +1061,18 @@ document.querySelectorAll('.candidate-btn').forEach(btn => {
     });
 });
 
+// 難度選擇按鈕
+const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+if (difficultyButtons.length > 0) {
+    updateDifficultyButtons();
+    difficultyButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const level = btn.dataset.level;
+            setDifficulty(level);
+        });
+    });
+}
+
 // 自動填入候選數字按鈕
 const autoCandidatesBtn = document.getElementById('auto-candidates-btn');
 if (autoCandidatesBtn) {
@@ -871,6 +1088,7 @@ if (autoCandidatesBtn) {
         initializeCandidates(puzzle);
         // 更新顯示
         updateAllCandidatesDisplay();
+        saveGame();
     });
 }
 
@@ -950,6 +1168,7 @@ if (hintBtn) {
             state.hintsUsed++;
             if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
             if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+            saveGame();
             return;
         }
         
@@ -1204,6 +1423,7 @@ if (hintBtn) {
                         state.hintsUsed++;
                         if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
                         if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+                        saveGame();
                         return;
                     }
                     // Naked Triple
@@ -1246,6 +1466,7 @@ if (hintBtn) {
                         state.hintsUsed++;
                         if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
                         if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+                        saveGame();
                         return;
                     }
 
@@ -1308,6 +1529,7 @@ if (hintBtn) {
                                             state.hintsUsed++;
                                             if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
                                             if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+                                            saveGame();
                                             return;
                                         }
                                     } else if (allCol) {
@@ -1349,6 +1571,7 @@ if (hintBtn) {
                                             state.hintsUsed++;
                                             if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
                                             if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+                                            saveGame();
                                             return;
                                         }
                                     }
@@ -1420,6 +1643,7 @@ if (hintBtn) {
             state.hintsUsed++;
             if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
             if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+            saveGame();
             return;
         }
         
@@ -1490,6 +1714,7 @@ if (hintBtn) {
                             state.hintsUsed++;
                             if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
                             if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+                            saveGame();
                             return;
                         }
                     }
@@ -1599,6 +1824,7 @@ if (hintBtn) {
                 state.hintsUsed++;
                 if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
                 if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+                saveGame();
                 return;
             }
         }
@@ -1619,5 +1845,10 @@ if (pauseBtn) {
     });
 }
 
-// 初始化時自動生成
-generateNewSudoku(getSelectedDifficulty());
+// 初始化：如有暫存進度則載入，否則生成新遊戲
+if (!loadGame()) {
+    generateNewSudoku(getSelectedDifficulty()).catch(err => {
+        console.error('遊戲初始化失敗:', err);
+        showToast('遊戲載入失敗，請重新整理頁面');
+    });
+}
