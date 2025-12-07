@@ -903,9 +903,11 @@ if (hintBtn) {
         const nakedSingleCells = [];
         for (let r = 0; r < N; r++) {
             for (let c = 0; c < N; c++) {
-                if (userInput[r][c] === 0 && calculatedCandidates[r][c].size === 1) {
-                    nakedSingleCells.push({ row: r, col: c });
-                }
+                    // 排除系統預填（given）格
+                    const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                    if (userInput[r][c] === 0 && calculatedCandidates[r][c].size === 1 && cellEl && !cellEl.classList.contains('given')) {
+                        nakedSingleCells.push({ row: r, col: c });
+                    }
             }
         }
         
@@ -984,15 +986,317 @@ if (hintBtn) {
         }
         
         if (hiddenSingleCells.length > 0) {
+                    // 策略 2: Naked Pair
+                    // 在每一行、每一列、每個區塊尋找 Naked Pair
+                    function findNakedPairOrTriple(type = 2) {
+                        // type=2: Naked Pair, type=3: Naked Triple
+                        // 回傳 {cells: [{row, col}], nums: Set, region: 'row'|'col'|'box', regionIdx: number}
+                        // 1. 行
+                        for (let row = 0; row < N; row++) {
+                            const cells = [];
+                            for (let col = 0; col < N; col++) {
+                                const cellEl = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                                if (userInput[row][col] === 0 && cellEl && !cellEl.classList.contains('given')) {
+                                    cells.push({row, col, cand: calculatedCandidates[row][col]});
+                                }
+                            }
+                            // 找出所有 type 個候選數字的格子
+                            const targetCells = cells.filter(c => c.cand.size === type);
+                            // 檢查是否有 type 格子候選集合完全相同
+                            for (let i = 0; i < targetCells.length; i++) {
+                                for (let j = i + 1; j < targetCells.length; j++) {
+                                    if (type === 2 && i === j) continue;
+                                    if (type === 3 && (j + 1 >= targetCells.length)) continue;
+                                    let group = [targetCells[i]];
+                                    if (type === 2) group.push(targetCells[j]);
+                                    if (type === 3) group = [targetCells[i], targetCells[j], targetCells[j+1]];
+                                    const allSame = group.every(c => eqSet(c.cand, group[0].cand));
+                                    if (allSame) {
+                                        // 檢查這 type 個候選數字在本行其他格是否出現
+                                        const nums = group[0].cand;
+                                        let canEliminate = false;
+                                        for (const c of cells) {
+                                            if (!group.includes(c)) {
+                                                for (const n of nums) {
+                                                    if (c.cand.has(n)) canEliminate = true;
+                                                }
+                                            }
+                                        }
+                                        if (canEliminate) {
+                                            return {cells: group.map(c => ({row: c.row, col: c.col})), nums, region: 'row', regionIdx: row};
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // 2. 列
+                        for (let col = 0; col < N; col++) {
+                            const cells = [];
+                            for (let row = 0; row < N; row++) {
+                                const cellEl = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                                if (userInput[row][col] === 0 && cellEl && !cellEl.classList.contains('given')) {
+                                    cells.push({row, col, cand: calculatedCandidates[row][col]});
+                                }
+                            }
+                            const targetCells = cells.filter(c => c.cand.size === type);
+                            for (let i = 0; i < targetCells.length; i++) {
+                                for (let j = i + 1; j < targetCells.length; j++) {
+                                    if (type === 2 && i === j) continue;
+                                    if (type === 3 && (j + 1 >= targetCells.length)) continue;
+                                    let group = [targetCells[i]];
+                                    if (type === 2) group.push(targetCells[j]);
+                                    if (type === 3) group = [targetCells[i], targetCells[j], targetCells[j+1]];
+                                    const allSame = group.every(c => eqSet(c.cand, group[0].cand));
+                                    if (allSame) {
+                                        const nums = group[0].cand;
+                                        let canEliminate = false;
+                                        for (const c of cells) {
+                                            if (!group.includes(c)) {
+                                                for (const n of nums) {
+                                                    if (c.cand.has(n)) canEliminate = true;
+                                                }
+                                            }
+                                        }
+                                        if (canEliminate) {
+                                            return {cells: group.map(c => ({row: c.row, col: c.col})), nums, region: 'col', regionIdx: col};
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // 3. 區塊
+                        for (let br = 0; br < 3; br++) {
+                            for (let bc = 0; bc < 3; bc++) {
+                                const cells = [];
+                                for (let r = br * 3; r < br * 3 + 3; r++) {
+                                    for (let c = bc * 3; c < bc * 3 + 3; c++) {
+                                        const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                                        if (userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given')) {
+                                            cells.push({row: r, col: c, cand: calculatedCandidates[r][c]});
+                                        }
+                                    }
+                                }
+                                const targetCells = cells.filter(c => c.cand.size === type);
+                                for (let i = 0; i < targetCells.length; i++) {
+                                    for (let j = i + 1; j < targetCells.length; j++) {
+                                        if (type === 2 && i === j) continue;
+                                        if (type === 3 && (j + 1 >= targetCells.length)) continue;
+                                        let group = [targetCells[i]];
+                                        if (type === 2) group.push(targetCells[j]);
+                                        if (type === 3) group = [targetCells[i], targetCells[j], targetCells[j+1]];
+                                        const allSame = group.every(c => eqSet(c.cand, group[0].cand));
+                                        if (allSame) {
+                                            const nums = group[0].cand;
+                                            let canEliminate = false;
+                                            for (const c of cells) {
+                                                if (!group.includes(c)) {
+                                                    for (const n of nums) {
+                                                        if (c.cand.has(n)) canEliminate = true;
+                                                    }
+                                                }
+                                            }
+                                            if (canEliminate) {
+                                                return {cells: group.map(c => ({row: c.row, col: c.col})), nums, region: 'box', regionIdx: br * 3 + bc};
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return null;
+                    }
+
+                    // Naked Pair
+                    function eqSet(a, b) {
+                        if (a.size !== b.size) return false;
+                        for (const v of a) if (!b.has(v)) return false;
+                        return true;
+                    }
+                    const nakedPair = findNakedPairOrTriple(2);
+                    if (nakedPair) {
+                        // 標示這兩格
+                        for (const {row, col} of nakedPair.cells) {
+                            const cell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                            if (cell) cell.classList.add('hint-border');
+                        }
+                        // 標示同區域其他可被刪除的格子
+                        let relatedCells = [];
+                        if (nakedPair.region === 'row') {
+                            for (let c = 0; c < N; c++) {
+                                if (!nakedPair.cells.some(cell => cell.row === nakedPair.regionIdx && cell.col === c)) {
+                                    const cell = gridContainer.querySelector(`[data-row="${nakedPair.regionIdx}"][data-col="${c}"]`);
+                                    if (cell) relatedCells.push(cell);
+                                }
+                            }
+                        } else if (nakedPair.region === 'col') {
+                            for (let r = 0; r < N; r++) {
+                                if (!nakedPair.cells.some(cell => cell.col === nakedPair.regionIdx && cell.row === r)) {
+                                    const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${nakedPair.regionIdx}"]`);
+                                    if (cell) relatedCells.push(cell);
+                                }
+                            }
+                        } else if (nakedPair.region === 'box') {
+                            const br = Math.floor(nakedPair.regionIdx / 3);
+                            const bc = nakedPair.regionIdx % 3;
+                            for (let r = br * 3; r < br * 3 + 3; r++) {
+                                for (let c = bc * 3; c < bc * 3 + 3; c++) {
+                                    if (!nakedPair.cells.some(cell => cell.row === r && cell.col === c)) {
+                                        const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                                        if (cell) relatedCells.push(cell);
+                                    }
+                                }
+                            }
+                        }
+                        relatedCells.forEach(cell => cell.classList.add('hint-related'));
+                        showToast(`=== 提示：Naked Pair ===\n${nakedPair.region === 'row' ? `第 ${nakedPair.regionIdx+1} 行` : nakedPair.region === 'col' ? `第 ${nakedPair.regionIdx+1} 列` : `第 ${Math.floor(nakedPair.regionIdx/3)+1} 區塊`}\n這兩格候選數字僅有：${Array.from(nakedPair.nums).join(', ')}\n可刪除同區域其他格的這些候選數字`);
+                        // select 第一格
+                        selectCell(nakedPair.cells[0].row, nakedPair.cells[0].col, true);
+                        hintsUsed++;
+                        hintCountSpan.textContent = hintsUsed;
+                        return;
+                    }
+                    // Naked Triple
+                    const nakedTriple = findNakedPairOrTriple(3);
+                    if (nakedTriple) {
+                        for (const {row, col} of nakedTriple.cells) {
+                            const cell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                            if (cell) cell.classList.add('hint-border');
+                        }
+                        let relatedCells = [];
+                        if (nakedTriple.region === 'row') {
+                            for (let c = 0; c < N; c++) {
+                                if (!nakedTriple.cells.some(cell => cell.row === nakedTriple.regionIdx && cell.col === c)) {
+                                    const cell = gridContainer.querySelector(`[data-row="${nakedTriple.regionIdx}"][data-col="${c}"]`);
+                                    if (cell) relatedCells.push(cell);
+                                }
+                            }
+                        } else if (nakedTriple.region === 'col') {
+                            for (let r = 0; r < N; r++) {
+                                if (!nakedTriple.cells.some(cell => cell.col === nakedTriple.regionIdx && cell.row === r)) {
+                                    const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${nakedTriple.regionIdx}"]`);
+                                    if (cell) relatedCells.push(cell);
+                                }
+                            }
+                        } else if (nakedTriple.region === 'box') {
+                            const br = Math.floor(nakedTriple.regionIdx / 3);
+                            const bc = nakedTriple.regionIdx % 3;
+                            for (let r = br * 3; r < br * 3 + 3; r++) {
+                                for (let c = bc * 3; c < bc * 3 + 3; c++) {
+                                    if (!nakedTriple.cells.some(cell => cell.row === r && cell.col === c)) {
+                                        const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                                        if (cell) relatedCells.push(cell);
+                                    }
+                                }
+                            }
+                        }
+                        relatedCells.forEach(cell => cell.classList.add('hint-related'));
+                        showToast(`=== 提示：Naked Triple ===\n${nakedTriple.region === 'row' ? `第 ${nakedTriple.regionIdx+1} 行` : nakedTriple.region === 'col' ? `第 ${nakedTriple.regionIdx+1} 列` : `第 ${Math.floor(nakedTriple.regionIdx/3)+1} 區塊`}\n這三格候選數字僅有：${Array.from(nakedTriple.nums).join(', ')}\n可刪除同區域其他格的這些候選數字`);
+                        selectCell(nakedTriple.cells[0].row, nakedTriple.cells[0].col, true);
+                        hintsUsed++;
+                        hintCountSpan.textContent = hintsUsed;
+                        return;
+                    }
+
+                    // 策略 3: Pointing (Box-Line Reduction)
+                    // 對每個區塊，檢查某數字只出現在同一行或同一列
+                    for (let num = 1; num <= 9; num++) {
+                        for (let br = 0; br < 3; br++) {
+                            for (let bc = 0; bc < 3; bc++) {
+                                let positions = [];
+                                for (let r = br * 3; r < br * 3 + 3; r++) {
+                                    for (let c = bc * 3; c < bc * 3 + 3; c++) {
+                                        const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                                        if (userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given') && calculatedCandidates[r][c].has(num)) {
+                                            positions.push({row: r, col: c});
+                                        }
+                                    }
+                                }
+                                if (positions.length > 1 && positions.length <= 3) {
+                                    // 檢查是否都在同一行
+                                    const allRow = positions.every(p => p.row === positions[0].row);
+                                    const allCol = positions.every(p => p.col === positions[0].col);
+                                    if (allRow) {
+                                        // 檢查是否真的有候選數字可以刪除（有效性檢查）
+                                        let canEliminate = false;
+                                        for (let c = 0; c < N; c++) {
+                                            if (c < bc * 3 || c >= bc * 3 + 3) {
+                                                if (userInput[positions[0].row][c] === 0 && calculatedCandidates[positions[0].row][c].has(num)) {
+                                                    canEliminate = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (canEliminate) {
+                                            // 標示區塊內這些格
+                                            positions.forEach(p => {
+                                                const cell = gridContainer.querySelector(`[data-row="${p.row}"][data-col="${p.col}"]`);
+                                                if (cell) cell.classList.add('hint-border');
+                                            });
+                                            // 標示同一行但不在本區塊的格
+                                            let relatedCells = [];
+                                            for (let c = 0; c < N; c++) {
+                                                if (c < bc * 3 || c >= bc * 3 + 3) {
+                                                    const cell = gridContainer.querySelector(`[data-row="${positions[0].row}"][data-col="${c}"]`);
+                                                    if (cell && userInput[positions[0].row][c] === 0 && calculatedCandidates[positions[0].row][c].has(num)) {
+                                                        relatedCells.push(cell);
+                                                    }
+                                                }
+                                            }
+                                            relatedCells.forEach(cell => cell.classList.add('hint-related'));
+                                            showToast(`=== 提示：Pointing (Box-Line) ===\n數字 ${num} 在第 ${br*3+bc+1} 區塊只出現在第 ${positions[0].row+1} 行\n可刪除該行其他區塊的 ${num} 候選`);
+                                            selectCell(positions[0].row, positions[0].col, true);
+                                            hintsUsed++;
+                                            hintCountSpan.textContent = hintsUsed;
+                                            return;
+                                        }
+                                    } else if (allCol) {
+                                        // 檢查是否真的有候選數字可以刪除（有效性檢查）
+                                        let canEliminate = false;
+                                        for (let r = 0; r < N; r++) {
+                                            if (r < br * 3 || r >= br * 3 + 3) {
+                                                if (userInput[r][positions[0].col] === 0 && calculatedCandidates[r][positions[0].col].has(num)) {
+                                                    canEliminate = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (canEliminate) {
+                                            positions.forEach(p => {
+                                                const cell = gridContainer.querySelector(`[data-row="${p.row}"][data-col="${p.col}"]`);
+                                                if (cell) cell.classList.add('hint-border');
+                                            });
+                                            let relatedCells = [];
+                                            for (let r = 0; r < N; r++) {
+                                                if (r < br * 3 || r >= br * 3 + 3) {
+                                                    const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${positions[0].col}"]`);
+                                                    if (cell && userInput[r][positions[0].col] === 0 && calculatedCandidates[r][positions[0].col].has(num)) {
+                                                        relatedCells.push(cell);
+                                                    }
+                                                }
+                                            }
+                                            relatedCells.forEach(cell => cell.classList.add('hint-related'));
+                                            showToast(`=== 提示：Pointing (Box-Line) ===\n數字 ${num} 在第 ${br*3+bc+1} 區塊只出現在第 ${positions[0].col+1} 列\n可刪除該列其他區塊的 ${num} 候選`);
+                                            selectCell(positions[0].row, positions[0].col, true);
+                                            hintsUsed++;
+                                            hintCountSpan.textContent = hintsUsed;
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
             // 去重（可能同一格被多次找到）
             const uniqueCells = [];
             const seen = new Set();
             for (const cell of hiddenSingleCells) {
                 const key = `${cell.row}-${cell.col}`;
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    uniqueCells.push(cell);
-                }
+                    // 排除系統預填（given）格
+                    const cellEl = gridContainer.querySelector(`[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                    if (!seen.has(key) && cellEl && !cellEl.classList.contains('given')) {
+                        seen.add(key);
+                        uniqueCells.push(cell);
+                    }
             }
             // 隨機選擇一個 Hidden Single
             const randomCell = uniqueCells[Math.floor(Math.random() * uniqueCells.length)];
@@ -1054,15 +1358,17 @@ if (hintBtn) {
         for (let r = 0; r < N; r++) {
             for (let c = 0; c < N; c++) {
                 const size = calculatedCandidates[r][c].size;
-                if (userInput[r][c] === 0 && size > 0) {
-                    if (size < minCandidates) {
-                        minCandidates = size;
-                        minCandidateCells.length = 0;
-                        minCandidateCells.push({ row: r, col: c });
-                    } else if (size === minCandidates) {
-                        minCandidateCells.push({ row: r, col: c });
+                    // 排除系統預填（given）格
+                    const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                    if (userInput[r][c] === 0 && size > 0 && cellEl && !cellEl.classList.contains('given')) {
+                        if (size < minCandidates) {
+                            minCandidates = size;
+                            minCandidateCells.length = 0;
+                            minCandidateCells.push({ row: r, col: c });
+                        } else if (size === minCandidates) {
+                            minCandidateCells.push({ row: r, col: c });
+                        }
                     }
-                }
             }
         }
         
