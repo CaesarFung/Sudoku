@@ -1900,8 +1900,30 @@ if (hintBtn) {
                 } else if (num2Count.box === 0 && num1Count.box > 0) {
                     hint += `提示：${candidates[1]} 在同區塊無其他位置，應是此格答案`;
                 } else {
-                    // 只有真的無法判斷時也給出提示文字並消耗一次提示
-                    hint += '目前沒有明確排除線索，請觀察同行、同列與同區塊的候選分佈。';
+                    // 無法判斷時，直接填入正確答案，避免浪費提示次數
+                    const correctAnswer = grid[row][col];
+                    userInput[row][col] = correctAnswer;
+                    
+                    const cell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                    if (cell) {
+                        cell.textContent = correctAnswer;
+                        cell.classList.remove('candidate-mode');
+                        cell.classList.add('user-input');
+                        // 移除候選數字
+                        const candidateEls = cell.querySelectorAll('.candidate');
+                        candidateEls.forEach(el => el.remove());
+                    }
+                    
+                    // 更新相關格子的候選數字
+                    updateCandidatesAfterInput(row, col, correctAnswer);
+                    
+                    hint += `無明確排除線索，已為您填入正確答案：${correctAnswer}\n（不消耗提示次數）`;
+                    showToast(hint);
+                    
+                    // 檢查是否完成
+                    checkCompletion();
+                    saveGame();
+                    return; // 不消耗提示次數
                 }
                 
                 showToast(hint);
@@ -1938,16 +1960,30 @@ if (hintBtn) {
         }
         if (fallback) {
             const { row, col, cands } = fallback;
+            // Fallback 直接填入正確答案，避免浪費提示次數
+            const correctAnswer = grid[row][col];
+            userInput[row][col] = correctAnswer;
+            
             const cell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-            if (cell) cell.classList.add('hint-border');
-            selectCell(row, col, true);
-            const fallbackMsg = `=== 提示：優先考慮最少候選 ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n候選：${cands.join(', ')}\n嘗試從此處著手，檢查同行列區塊的衝突`; 
+            if (cell) {
+                cell.textContent = correctAnswer;
+                cell.classList.remove('candidate-mode');
+                cell.classList.add('user-input');
+                // 移除候選數字
+                const candidateEls = cell.querySelectorAll('.candidate');
+                candidateEls.forEach(el => el.remove());
+            }
+            
+            // 更新相關格子的候選數字
+            updateCandidatesAfterInput(row, col, correctAnswer);
+            
+            const fallbackMsg = `=== 提示：已填入答案 ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n原候選：${cands.join(', ')}\n正確答案：${correctAnswer}\n（無明確技巧可提示，已直接填入，不消耗提示次數）`; 
             showToast(fallbackMsg);
-            state.hintsUsed++;
-            if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
-            if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+            
+            // 檢查是否完成
+            checkCompletion();
             saveGame();
-            return;
+            return; // 不消耗提示次數
         }
 
         // 理論上不應該到這裡（除非遊戲已完成）
