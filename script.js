@@ -24,7 +24,6 @@ let lastSavedElapsed = null; // 用於節流計時器自動保存
 
 // DOM 元素
 const gridContainer = document.getElementById('sudoku-grid');
-const generateBtn = document.getElementById('generate-btn');
 const statusSpan = document.getElementById('status');
 const errorCountSpan = document.getElementById('error-count');
 const timerSpan = document.getElementById('timer');
@@ -58,7 +57,7 @@ function showToast(message) {
     consoleToast.classList.add('show');
     state.toastTimeout = setTimeout(() => {
         consoleToast.classList.remove('show');
-    }, 3000);
+    }, 8000);
 }
 
 // 難度設定：載入、切換、更新 UI 樣式
@@ -69,11 +68,7 @@ function loadSavedDifficulty() {
 }
 
 function updateDifficultyButtons() {
-    document.querySelectorAll('.difficulty-btn').forEach(btn => {
-        const level = btn.dataset.level;
-        btn.classList.toggle('active', level === state.currentDifficulty);
-        btn.setAttribute('aria-pressed', level === state.currentDifficulty ? 'true' : 'false');
-    });
+    // Difficulty buttons are now only in pause overlay, no static buttons to update
 }
 
 function setDifficulty(level) {
@@ -683,6 +678,9 @@ function showGameOverDialog() {
     const message = `❌ 遊戲結束\n\n錯誤次數已達上限 (3/3)\n⏱️ 用時：${timeStr}\n💡 提示次數：${state.hintsUsed}\n\n點選確認開始新遊戲`;
     if (confirm(message)) {
         generateNewSudoku(getSelectedDifficulty());
+    } else {
+        // User cancelled, keep game over state and timer stopped
+        state.gameOver = true;
     }
 }
 
@@ -698,6 +696,9 @@ function showGameCompleteDialog() {
     const message = `🎉 恭喜完成！\n\n⏱️ 用時：${timeStr}\n💡 提示次數：${state.hintsUsed}\n❌ 錯誤次數：${state.errorCount}/3\n\n點選確認開始新遊戲`;
     if (confirm(message)) {
         generateNewSudoku(getSelectedDifficulty());
+    } else {
+        // User cancelled, keep game over state and timer stopped
+        state.gameOver = true;
     }
 }
 
@@ -763,11 +764,26 @@ function pauseGame() {
     state.pauseOverlay = document.createElement('div');
     state.pauseOverlay.className = 'pause-overlay';
     state.pauseOverlay.innerHTML = `
-        <div class="pause-text">⏸️ 已暫停</div>
-        <button class="resume-btn">▶️ 繼續遊戲</button>
+        <button class="resume-btn">繼續遊戲</button>
+        <div class="new-game-text">新遊戲</div>
+        <div class="difficulty-buttons">
+            <button class="difficulty-btn" data-level="intro">入門</button>
+            <button class="difficulty-btn" data-level="easy">簡單</button>
+            <button class="difficulty-btn" data-level="medium">普通</button>
+            <button class="difficulty-btn" data-level="hard">困難</button>
+            <button class="difficulty-btn" data-level="expert">地獄</button>
+        </div>
     `;
     document.body.appendChild(state.pauseOverlay);
     state.pauseOverlay.querySelector('.resume-btn').addEventListener('click', resumeGame);
+    state.pauseOverlay.querySelectorAll('.difficulty-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const level = btn.dataset.level;
+            setDifficulty(level);
+            resumeGame();
+            generateNewSudoku(DIFFICULTIES[level].removals);
+        });
+    });
     saveGame();
 }
 
@@ -887,11 +903,26 @@ function loadGame() {
             state.pauseOverlay = document.createElement('div');
             state.pauseOverlay.className = 'pause-overlay';
             state.pauseOverlay.innerHTML = `
-                <div class="pause-text">⏸️ 已暫停</div>
-                <button class="resume-btn">▶️ 繼續遊戲</button>
+                <button class="resume-btn">繼續遊戲</button>
+                <div class="new-game-text">新遊戲</div>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn" data-level="intro">入門</button>
+                    <button class="difficulty-btn" data-level="easy">簡單</button>
+                    <button class="difficulty-btn" data-level="medium">普通</button>
+                    <button class="difficulty-btn" data-level="hard">困難</button>
+                    <button class="difficulty-btn" data-level="expert">地獄</button>
+                </div>
             `;
             document.body.appendChild(state.pauseOverlay);
             state.pauseOverlay.querySelector('.resume-btn').addEventListener('click', resumeGame);
+            state.pauseOverlay.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const level = btn.dataset.level;
+                    setDifficulty(level);
+                    resumeGame();
+                    generateNewSudoku(DIFFICULTIES[level].removals);
+                });
+            });
         }
 
         return true;
@@ -1032,9 +1063,6 @@ function updateAllCandidatesDisplay() {
     }
 }
 
-// 綁定事件
-if (generateBtn) generateBtn.addEventListener('click', () => generateNewSudoku(getSelectedDifficulty()));
-
 // 綁定答案按鈕
 document.querySelectorAll('.answer-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1060,18 +1088,6 @@ document.querySelectorAll('.candidate-btn').forEach(btn => {
         }
     });
 });
-
-// 難度選擇按鈕
-const difficultyButtons = document.querySelectorAll('.difficulty-btn');
-if (difficultyButtons.length > 0) {
-    updateDifficultyButtons();
-    difficultyButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const level = btn.dataset.level;
-            setDifficulty(level);
-        });
-    });
-}
 
 // 自動填入候選數字按鈕
 const autoCandidatesBtn = document.getElementById('auto-candidates-btn');
@@ -2001,6 +2017,26 @@ if (pauseBtn) {
         }
     });
 }
+
+// 監聽網頁顯示狀態，隱藏時暫停計時器
+let wasAutoHidden = false;
+document.addEventListener('visibilitychange', () => {
+    if (state.gameOver) return;
+    
+    if (document.hidden) {
+        // 網頁隱藏，記錄是否本來就是暫停狀態
+        if (!state.isPaused) {
+            wasAutoHidden = true;
+            pauseGame();
+        }
+    } else {
+        // 網頁顯示，如果是自動暫停則自動恢復
+        if (wasAutoHidden && state.isPaused) {
+            wasAutoHidden = false;
+            resumeGame();
+        }
+    }
+});
 
 // 初始化：如有暫存進度則載入，否則生成新遊戲
 if (!loadGame()) {
