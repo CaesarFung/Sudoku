@@ -757,8 +757,8 @@ function stopTimer() {
     }
 }
 
-function pauseGame() {
-    if (state.isPaused || state.gameOver) return;
+function pauseGame(allowFromGameOver = false) {
+    if (state.isPaused || (state.gameOver && !allowFromGameOver)) return;
     state.isPaused = true;
     state.pauseStartTime = Date.now();
     state.pauseOverlay = document.createElement('div');
@@ -2014,7 +2014,7 @@ if (pauseBtn) {
             resumeGame();
         } else {
             // 遊戲結束後也可開啟設定菜單
-            pauseGame();
+            pauseGame(true);
         }
     });
 }
