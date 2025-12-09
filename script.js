@@ -2013,6 +2013,7 @@ if (pauseBtn) {
         if (state.isPaused) {
             resumeGame();
         } else {
+            // 遊戲結束後也可開啟設定菜單
             pauseGame();
         }
     });
