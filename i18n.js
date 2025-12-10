@@ -31,6 +31,7 @@ const translations = {
         
         // 錯誤和警告訊息
         noHintAvailable: '無法找到可提示的格子！',
+        hintLimitReached: '已達提示上限（3 次）',
         saveFailed: '儲存進度失敗',
         loadFailed: '載入進度失敗',
         difficultyFailed: '儲存難度失敗',
@@ -81,6 +82,7 @@ const translations = {
         
         // Error and Warning Messages
         noHintAvailable: 'No hint available!',
+        hintLimitReached: 'Hint limit reached (3 used)',
         saveFailed: 'Failed to save progress',
         loadFailed: 'Failed to load progress',
         difficultyFailed: 'Failed to save difficulty',
@@ -131,6 +133,7 @@ const translations = {
         
         // エラーと警告メッセージ
         noHintAvailable: 'ヒントが利用できません！',
+        hintLimitReached: 'ヒント上限に達しました（3回使用）',
         saveFailed: '進行状況の保存に失敗しました',
         loadFailed: '進行状況の読み込みに失敗しました',
         difficultyFailed: '難易度の保存に失敗しました',
@@ -181,6 +184,7 @@ const translations = {
         
         // 오류 및 경고 메시지
         noHintAvailable: '사용 가능한 힌트가 없습니다!',
+        hintLimitReached: '힌트 한도에 도달했습니다 (3회 사용)',
         saveFailed: '진행 상황 저장 실패',
         loadFailed: '진행 상황 로드 실패',
         difficultyFailed: '난이도 저장 실패',

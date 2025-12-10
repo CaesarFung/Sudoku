@@ -379,6 +379,15 @@ function renderGrid(puzzle) {
                 
                 cell.appendChild(notesDiv);
                 cell.addEventListener('click', () => selectCell(r, c));
+                
+                // Double click 時，如果只有一個候選數字，直接輸入
+                cell.addEventListener('dblclick', () => {
+                    const candidates = getCandidates(r, c);
+                    if (candidates.size === 1) {
+                        const num = Array.from(candidates)[0];
+                        inputNumber(num);
+                    }
+                });
             }
             
             gridContainer.appendChild(cell);
@@ -1111,7 +1120,11 @@ const hintBtn = document.getElementById('hint-btn');
 const hintCountSpan = document.getElementById('hint-count');
 if (hintBtn) {
     hintBtn.addEventListener('click', () => {
-        if (state.gameOver || state.hintsUsed >= 3) return;
+        if (state.gameOver) return;
+        if (state.hintsUsed >= 3) {
+            showToast(i18n.t('hintLimitReached'));
+            return;
+        }
         
         // 移除所有舊的提示邊框和相關提示
         document.querySelectorAll('.cell.hint-border').forEach(c => c.classList.remove('hint-border'));
