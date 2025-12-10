@@ -14,11 +14,11 @@ const DIFFICULTY_KEY = 'sudoku-difficulty';
 let globalBestPuzzle = null;
 let globalBestRemoved = 0;
 const DIFFICULTIES = {
-    intro: { label: '入門', removals: 46 },
-    easy: { label: '簡單', removals: 50 },
-    medium: { label: '普通', removals: 52 },
-    hard: { label: '困難', removals: 54 },
-    expert: { label: '地獄', removals: 58 }
+    intro: { removals: 46 },
+    easy: { removals: 50 },
+    medium: { removals: 52 },
+    hard: { removals: 54 },
+    expert: { removals: 58 }
 };
 let lastSavedElapsed = null; // 用於節流計時器自動保存
 
@@ -77,7 +77,7 @@ function setDifficulty(level) {
     try {
         localStorage.setItem(DIFFICULTY_KEY, level);
     } catch (err) {
-        console.warn('儲存難度失敗', err);
+        console.warn(i18n.t('difficultyFailed'), err);
     }
     updateDifficultyButtons();
 }
@@ -251,7 +251,7 @@ function createPuzzle(targetRemovals, ensureUnique = true, retryCount = 0) {
     let actualAttempts = 0;
     
     if (retryCount > 5) {
-        console.warn(`超過重試上限，返回最佳結果 (移除: ${globalBestRemoved}/${targetRemovals})`);
+        console.warn(i18n.t('retryExceeded', globalBestRemoved, targetRemovals));
         return globalBestPuzzle || grid.map(row => [...row]);
     }
     
@@ -324,13 +324,13 @@ function createPuzzle(targetRemovals, ensureUnique = true, retryCount = 0) {
     
     // 如果未達到目標移除格數，重新生成新的完整網格並再次嘗試
     if (bestRemoved < targetRemovals) {
-        console.log(`未達標 (移除: ${bestRemoved}/${targetRemovals})，重新生成...`);
+        console.log(i18n.t('puzzleBelowTarget', bestRemoved, targetRemovals));
         grid = Array.from({ length: N }, () => Array(N).fill(0));
         fillGrid(0, 0);
         return createPuzzle(targetRemovals, ensureUnique, retryCount + 1);
     }
 
-    console.log(`移除: ${bestRemoved}/${targetRemovals} (嘗試${actualAttempts}次)`);
+    console.log(i18n.t('puzzleComplete', bestRemoved, targetRemovals, actualAttempts));
     return bestPuzzle;
 }
 
@@ -675,7 +675,7 @@ function showGameOverDialog() {
     const seconds = elapsed % 60;
     const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    const message = `❌ 遊戲結束\n\n錯誤次數已達上限 (3/3)\n⏱️ 用時：${timeStr}\n💡 提示次數：${state.hintsUsed}\n\n點選確認開始新遊戲`;
+    const message = i18n.t('gameOverMessage', timeStr, state.hintsUsed, 3);
     if (confirm(message)) {
         generateNewSudoku(getSelectedDifficulty());
     } else {
@@ -693,7 +693,7 @@ function showGameCompleteDialog() {
     const seconds = elapsed % 60;
     const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    const message = `🎉 恭喜完成！\n\n⏱️ 用時：${timeStr}\n💡 提示次數：${state.hintsUsed}\n❌ 錯誤次數：${state.errorCount}/3\n\n點選確認開始新遊戲`;
+    const message = i18n.t('gameCompleteMessage', timeStr, state.hintsUsed, state.errorCount);
     if (confirm(message)) {
         generateNewSudoku(getSelectedDifficulty());
     } else {
@@ -757,26 +757,33 @@ function stopTimer() {
     }
 }
 
-function pauseGame(allowFromGameOver = false) {
-    if (state.isPaused || (state.gameOver && !allowFromGameOver)) return;
-    state.isPaused = true;
-    state.pauseStartTime = Date.now();
-    state.pauseOverlay = document.createElement('div');
-    state.pauseOverlay.className = 'pause-overlay';
-    state.pauseOverlay.innerHTML = `
-        <button class="resume-btn">繼續遊戲</button>
-        <div class="new-game-text">新遊戲</div>
-        <div class="difficulty-buttons">
-            <button class="difficulty-btn" data-level="intro">入門</button>
-            <button class="difficulty-btn" data-level="easy">簡單</button>
-            <button class="difficulty-btn" data-level="medium">普通</button>
-            <button class="difficulty-btn" data-level="hard">困難</button>
-            <button class="difficulty-btn" data-level="expert">地獄</button>
-        </div>
-    `;
-    document.body.appendChild(state.pauseOverlay);
-    state.pauseOverlay.querySelector('.resume-btn').addEventListener('click', resumeGame);
-    state.pauseOverlay.querySelectorAll('.difficulty-btn').forEach(btn => {
+// 更新提示計數器並禁用提示按鈕
+function updateHintCounter() {
+    state.hintsUsed++;
+    if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
+    if (state.hintsUsed >= 3 && hintBtn) hintBtn.disabled = true;
+}
+
+// 從 template 建立暫停菜單
+function createPauseOverlay() {
+    const template = document.getElementById('pause-menu-template');
+    const element = template.content.cloneNode(true).firstElementChild;
+    updatePauseOverlayText(element);
+    return element;
+}
+
+// 更新暫停菜單文字為當前語言
+function updatePauseOverlayText(element) {
+    element.querySelectorAll('[data-i18n-text]').forEach(el => {
+        const key = el.dataset.i18nText;
+        el.textContent = i18n.t(key);
+    });
+}
+
+// 為暫停菜單設定事件監聽
+function setupPauseOverlayEvents(overlay) {
+    overlay.querySelector('.resume-btn').addEventListener('click', resumeGame);
+    overlay.querySelectorAll('.difficulty-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const level = btn.dataset.level;
             setDifficulty(level);
@@ -784,6 +791,17 @@ function pauseGame(allowFromGameOver = false) {
             generateNewSudoku(DIFFICULTIES[level].removals);
         });
     });
+}
+
+function pauseGame(allowFromGameOver = false) {
+    if (state.isPaused || (state.gameOver && !allowFromGameOver)) return;
+    state.isPaused = true;
+    state.pauseStartTime = Date.now();
+    
+    state.pauseOverlay = createPauseOverlay();
+    document.body.appendChild(state.pauseOverlay);
+    setupPauseOverlayEvents(state.pauseOverlay);
+    
     saveGame();
 }
 
@@ -844,7 +862,7 @@ function saveGame() {
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (err) {
-        console.warn('儲存進度失敗', err);
+        console.warn(i18n.t('saveFailed'), err);
     }
 }
 
@@ -852,7 +870,7 @@ function clearSavedGame() {
     try {
         localStorage.removeItem(STORAGE_KEY);
     } catch (err) {
-        console.warn('清除進度失敗', err);
+        console.warn(i18n.t('loadFailed'), err);
     }
 }
 
@@ -900,34 +918,14 @@ function loadGame() {
 
         // 若載入時處於暫停狀態，重建暫停遮罩但不重複儲存
         if (state.isPaused) {
-            state.pauseOverlay = document.createElement('div');
-            state.pauseOverlay.className = 'pause-overlay';
-            state.pauseOverlay.innerHTML = `
-                <button class="resume-btn">繼續遊戲</button>
-                <div class="new-game-text">新遊戲</div>
-                <div class="difficulty-buttons">
-                    <button class="difficulty-btn" data-level="intro">入門</button>
-                    <button class="difficulty-btn" data-level="easy">簡單</button>
-                    <button class="difficulty-btn" data-level="medium">普通</button>
-                    <button class="difficulty-btn" data-level="hard">困難</button>
-                    <button class="difficulty-btn" data-level="expert">地獄</button>
-                </div>
-            `;
+            state.pauseOverlay = createPauseOverlay();
             document.body.appendChild(state.pauseOverlay);
-            state.pauseOverlay.querySelector('.resume-btn').addEventListener('click', resumeGame);
-            state.pauseOverlay.querySelectorAll('.difficulty-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const level = btn.dataset.level;
-                    setDifficulty(level);
-                    resumeGame();
-                    generateNewSudoku(DIFFICULTIES[level].removals);
-                });
-            });
+            setupPauseOverlayEvents(state.pauseOverlay);
         }
 
         return true;
     } catch (err) {
-        console.warn('載入進度失敗', err);
+        console.warn(i18n.t('loadFailed'), err);
         return false;
     }
 }
@@ -1170,7 +1168,7 @@ if (hintBtn) {
             const { row, col } = randomCell;
             const onlyCandidate = Array.from(calculatedCandidates[row][col])[0];
             
-            const nakedMsg = `=== 提示：Naked Single ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n這個格子的候選數字只剩一個：${onlyCandidate}\n因此答案必定是 ${onlyCandidate}`;
+            const nakedMsg = i18n.t('nakedSingleHint', row + 1, col + 1, onlyCandidate);
             showToast(nakedMsg);
             
             state.hintCells.add(`${row}-${col}`);
@@ -1433,7 +1431,13 @@ if (hintBtn) {
                             }
                         }
                         relatedCells.forEach(cell => cell.classList.add('hint-related'));
-                        showToast(`=== 提示：Naked Pair ===\n${nakedPair.region === 'row' ? `第 ${nakedPair.regionIdx+1} 行` : nakedPair.region === 'col' ? `第 ${nakedPair.regionIdx+1} 列` : `第 ${Math.floor(nakedPair.regionIdx/3)+1} 區塊`}\n這兩格候選數字僅有：${Array.from(nakedPair.nums).join(', ')}\n可刪除同區域其他格的這些候選數字`);
+                        const regionNameMap = { row: i18n.t('row'), col: i18n.t('col'), box: i18n.t('box') };
+                        const regionName = regionNameMap[nakedPair.region];
+                        const regionDisplay = nakedPair.region === 'row' ? `${regionName}${nakedPair.regionIdx+1}` : 
+                                             nakedPair.region === 'col' ? `${regionName}${nakedPair.regionIdx+1}` : 
+                                             `${regionName}${Math.floor(nakedPair.regionIdx/3)+1}`;
+                        const nakedPairMsg = i18n.t('nakedPairHint', regionName, nakedPair.regionIdx + (nakedPair.region === 'box' ? Math.floor(nakedPair.regionIdx/3)*3 : 1), Array.from(nakedPair.nums).join(', '));
+                        showToast(nakedPairMsg);
                         // select 第一格
                         selectCell(nakedPair.cells[0].row, nakedPair.cells[0].col, true);
                         state.hintsUsed++;
@@ -1477,7 +1481,10 @@ if (hintBtn) {
                             }
                         }
                         relatedCells.forEach(cell => cell.classList.add('hint-related'));
-                        showToast(`=== 提示：Naked Triple ===\n${nakedTriple.region === 'row' ? `第 ${nakedTriple.regionIdx+1} 行` : nakedTriple.region === 'col' ? `第 ${nakedTriple.regionIdx+1} 列` : `第 ${Math.floor(nakedTriple.regionIdx/3)+1} 區塊`}\n這三格候選數字僅有：${Array.from(nakedTriple.nums).join(', ')}\n可刪除同區域其他格的這些候選數字`);
+                        const regionNameMap = { row: i18n.t('row'), col: i18n.t('col'), box: i18n.t('box') };
+                        const regionName = regionNameMap[nakedTriple.region];
+                        const nakedTripleMsg = i18n.t('nakedTripleHint', regionName, nakedTriple.regionIdx + (nakedTriple.region === 'box' ? Math.floor(nakedTriple.regionIdx/3)*3 : 1), Array.from(nakedTriple.nums).join(', '));
+                        showToast(nakedTripleMsg);
                         selectCell(nakedTriple.cells[0].row, nakedTriple.cells[0].col, true);
                         state.hintsUsed++;
                         if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
@@ -1540,7 +1547,9 @@ if (hintBtn) {
                                                 }
                                             }
                                             relatedCells.forEach(cell => cell.classList.add('hint-related'));
-                                            showToast(`=== 提示：Pointing (Box-Line) ===\n數字 ${num} 在第 ${br*3+bc+1} 區塊只出現在第 ${positions[0].row+1} 行\n可刪除該行其他區塊的 ${num} 候選`);
+                                            const lineType = i18n.t('row');
+                                            const pointingMsg = i18n.t('pointingHint', num, br*3+bc+1, positions[0].row+1, lineType);
+                                            showToast(pointingMsg);
                                             selectCell(positions[0].row, positions[0].col, true);
                                             state.hintsUsed++;
                                             if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
@@ -1582,7 +1591,9 @@ if (hintBtn) {
                                                 }
                                             }
                                             relatedCells.forEach(cell => cell.classList.add('hint-related'));
-                                            showToast(`=== 提示：Pointing (Box-Line) ===\n數字 ${num} 在第 ${br*3+bc+1} 區塊只出現在第 ${positions[0].col+1} 列\n可刪除該列其他區塊的 ${num} 候選`);
+                                            const lineType = i18n.t('col');
+                                            const pointingMsg = i18n.t('pointingHint', num, br*3+bc+1, positions[0].col+1, lineType);
+                                            showToast(pointingMsg);
                                             selectCell(positions[0].row, positions[0].col, true);
                                             state.hintsUsed++;
                                             if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
@@ -1631,7 +1642,9 @@ if (hintBtn) {
                                             if (cell) cell.classList.add('hint-border');
                                         });
                                         related.forEach(cell => cell.classList.add('hint-related'));
-                                        showToast(`=== 提示：Claiming (Line→Box) ===\n數字 ${num} 在第 ${row+1} 行只出現在同一區塊\n可刪除該區塊其他格的 ${num} 候選`);
+                                        const lineType = i18n.t('row');
+                                        const claimingMsg = i18n.t('claimingHint', num, row+1, lineType);
+                                        showToast(claimingMsg);
                                         selectCell(positions[0].row, positions[0].col, true);
                                         state.hintsUsed++;
                                         if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
@@ -1675,7 +1688,9 @@ if (hintBtn) {
                                             if (cell) cell.classList.add('hint-border');
                                         });
                                         related.forEach(cell => cell.classList.add('hint-related'));
-                                        showToast(`=== 提示：Claiming (Line→Box) ===\n數字 ${num} 在第 ${col+1} 列只出現在同一區塊\n可刪除該區塊其他格的 ${num} 候選`);
+                                        const lineType = i18n.t('col');
+                                        const claimingMsg = i18n.t('claimingHint', num, col+1, lineType);
+                                        showToast(claimingMsg);
                                         selectCell(positions[0].row, positions[0].col, true);
                                         state.hintsUsed++;
                                         if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
@@ -1703,7 +1718,8 @@ if (hintBtn) {
             const randomCell = uniqueCells[Math.floor(Math.random() * uniqueCells.length)];
             const { row, col, num, type } = randomCell;
             
-            const hiddenMsg = `=== 提示：Hidden Single ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n數字 ${num} 在此${type === 'row' ? '行' : type === 'col' ? '列' : '3x3區塊'}中只能填在這個位置\n淡黃色背景：相關的${type === 'row' ? '同行' : type === 'col' ? '同列' : '同區塊'}格子`;
+            const regionType = type === 'row' ? i18n.t('row') : type === 'col' ? i18n.t('col') : i18n.t('box');
+            const hiddenMsg = i18n.t('hiddenSingleHint', row + 1, col + 1, num, regionType, 0);
             showToast(hiddenMsg);
             
             state.hintCells.add(`${row}-${col}`);
@@ -1817,7 +1833,8 @@ if (hintBtn) {
                                 }
                             }
                             
-                            showToast(`=== 提示：X-Wing ===\n數字 ${num} 在第 ${row1+1} 行和第 ${row2+1} 行\n只出現在第 ${col1+1} 列和第 ${col2+1} 列\n可刪除這兩列其他位置的 ${num} 候選`);
+                            const xWingMsg = i18n.t('xWingHint', num, row1+1, row2+1, col1+1, col2+1);
+                            showToast(xWingMsg);
                             selectCell(row1, col1, true);
                             state.hintsUsed++;
                             if (hintCountSpan) hintCountSpan.textContent = `${3 - state.hintsUsed}`;
@@ -1879,7 +1896,7 @@ if (hintBtn) {
                 const candidates = Array.from(calculatedCandidates[row][col]).sort((a, b) => a - b);
                 
                 // 提供更具體的分析建議
-                let hint = `=== 提示：邏輯排除 ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n可能是：${candidates[0]} 或 ${candidates[1]}\n`;
+                let hint = i18n.t('logicElimination', row + 1, col + 1) + `${candidates[0]} 或 ${candidates[1]}\n`;
                 
                 // 分析這兩個候選在同行/列/區塊的分佈
                 const num1Count = { row: 0, col: 0, box: 0 };
@@ -1904,17 +1921,17 @@ if (hintBtn) {
                 
                 // 給予建議
                 if (num1Count.row === 0 && num2Count.row > 0) {
-                    hint += `提示：${candidates[0]} 在本行無其他位置，應是此格答案`;
+                    hint += i18n.t('eliminationAdvice', candidates[0], i18n.t('row'));
                 } else if (num2Count.row === 0 && num1Count.row > 0) {
-                    hint += `提示：${candidates[1]} 在本行無其他位置，應是此格答案`;
+                    hint += i18n.t('eliminationAdvice', candidates[1], i18n.t('row'));
                 } else if (num1Count.col === 0 && num2Count.col > 0) {
-                    hint += `提示：${candidates[0]} 在本列無其他位置，應是此格答案`;
+                    hint += i18n.t('eliminationAdvice', candidates[0], i18n.t('col'));
                 } else if (num2Count.col === 0 && num1Count.col > 0) {
-                    hint += `提示：${candidates[1]} 在本列無其他位置，應是此格答案`;
+                    hint += i18n.t('eliminationAdvice', candidates[1], i18n.t('col'));
                 } else if (num1Count.box === 0 && num2Count.box > 0) {
-                    hint += `提示：${candidates[0]} 在同區塊無其他位置，應是此格答案`;
+                    hint += i18n.t('eliminationAdvice', candidates[0], i18n.t('box'));
                 } else if (num2Count.box === 0 && num1Count.box > 0) {
-                    hint += `提示：${candidates[1]} 在同區塊無其他位置，應是此格答案`;
+                    hint += i18n.t('eliminationAdvice', candidates[1], i18n.t('box'));
                 } else {
                     // 無法判斷時，直接填入正確答案，避免浪費提示次數
                     const correctAnswer = grid[row][col];
@@ -1933,8 +1950,8 @@ if (hintBtn) {
                     // 更新相關格子的候選數字
                     updateCandidatesAfterInput(row, col, correctAnswer);
                     
-                    hint += `無明確排除線索，已為您填入正確答案：${correctAnswer}\n（不消耗提示次數）`;
-                    showToast(hint);
+                    const fallbackMsg = i18n.t('noClueHint', row + 1, col + 1, cands.join(', '), correctAnswer);
+                    showToast(fallbackMsg);
                     
                     // 檢查是否完成
                     checkCompletion();
@@ -1993,7 +2010,7 @@ if (hintBtn) {
             // 更新相關格子的候選數字
             updateCandidatesAfterInput(row, col, correctAnswer);
             
-            const fallbackMsg = `=== 提示：已填入答案 ===\n位置：第 ${row + 1} 行，第 ${col + 1} 列\n原候選：${cands.join(', ')}\n正確答案：${correctAnswer}\n（無明確技巧可提示，已直接填入，不消耗提示次數）`; 
+            const fallbackMsg = i18n.t('noClueHint', row + 1, col + 1, cands.join(', '), correctAnswer); 
             showToast(fallbackMsg);
             
             // 檢查是否完成
@@ -2003,7 +2020,7 @@ if (hintBtn) {
         }
 
         // 理論上不應該到這裡（除非遊戲已完成）
-        showToast('無法找到可提示的格子！');
+        showToast(i18n.t('noHintAvailable'));
     });
 }
 
@@ -2042,7 +2059,7 @@ document.addEventListener('visibilitychange', () => {
 // 初始化：如有暫存進度則載入，否則生成新遊戲
 if (!loadGame()) {
     generateNewSudoku(getSelectedDifficulty()).catch(err => {
-        console.error('遊戲初始化失敗:', err);
-        showToast('遊戲載入失敗，請重新整理頁面');
+        console.error(i18n.t('generateFailed'), err);
+        showToast(i18n.t('loadGameFailed'));
     });
 }
