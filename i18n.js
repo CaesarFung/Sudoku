@@ -205,8 +205,8 @@ const translations = {
 // 語言管理類
 class I18n {
     constructor(defaultLang = 'zh-Hant') {
-        this.currentLang = this.loadLanguage() || this.detectSystemLanguage() || defaultLang;
         this.supportedLanguages = Object.keys(translations);
+        this.currentLang = this.loadLanguage() || this.detectSystemLanguage() || defaultLang;
     }
 
     loadLanguage() {
