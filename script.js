@@ -382,9 +382,8 @@ function renderGrid(puzzle) {
                 
                 // Double click 時，如果只有一個候選數字，直接輸入
                 cell.addEventListener('dblclick', () => {
-                    const candidates = getCandidates(r, c);
-                    if (candidates.size === 1) {
-                        const num = Array.from(candidates)[0];
+                    if (candidates[r][c].size === 1) {
+                        const num = Array.from(candidates[r][c])[0];
                         inputNumber(num);
                     }
                 });
