@@ -648,11 +648,7 @@ function inputNumber(num) {
 
         saveGame();
         
-        // 檢查遊戲是否完成
-        if (isGameComplete()) {
-            state.gameOver = true;
-            setTimeout(() => showGameCompleteDialog(), 500);
-        }
+        checkCompletion();
     }
 }
 
@@ -672,6 +668,15 @@ function isGameComplete() {
         }
     }
     return true;
+}
+
+// 集中處理完成檢查，避免漏掉提示自動填入等情境
+function checkCompletion() {
+    if (state.gameOver) return;
+    if (isGameComplete()) {
+        state.gameOver = true;
+        setTimeout(() => showGameCompleteDialog(), 500);
+    }
 }
 
 // 顯示遊戲結束對話框（失敗）
@@ -1058,6 +1063,14 @@ function removeRelatedCandidates(row, col, num) {
             }
         }
     }
+}
+
+// 在自動填入值後更新候選、顯示與按鈕狀態
+function updateCandidatesAfterInput(row, col, num) {
+    removeRelatedCandidates(row, col, num);
+    updateCellDisplay(row, col);
+    updateHighlights();
+    updateButtonStates();
 }
 
 // 更新所有格子的候選數字顯示
@@ -1965,12 +1978,11 @@ if (hintBtn) {
                     const fallbackMsg = i18n.t('noClueHint', row + 1, col + 1, cands.join(', '), correctAnswer);
                     showToast(fallbackMsg);
                     
-                    // 檢查是否完成
                     checkCompletion();
                     saveGame();
                     return; // 不消耗提示次數
                 }
-                
+
                 showToast(hint);
                 state.hintCells.add(`${row}-${col}`);
                 
@@ -2002,6 +2014,7 @@ if (hintBtn) {
                     }
                 }
             }
+
         }
         if (fallback) {
             const { row, col, cands } = fallback;
