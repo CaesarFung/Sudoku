@@ -601,6 +601,11 @@ function inputNumber(num) {
     } else {
         // 普通模式：設置值（清空候選數字）
 
+        // 如果格子已經有值，忽略再次輸入，避免誤操作增加錯誤次數
+        if (userInput[row][col] !== 0) {
+            return;
+        }
+
         // 保存原始的候選數字集合（還原用）
         const originalCandidates = new Set(candidates[row][col]);
 
@@ -1679,7 +1684,7 @@ if (hintBtn) {
                                     const isInLine = (r === row);
                                     const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
                                     // 必須實際存在該候選且目前未填，避免浪費提示
-                                    if (!isInLine && userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given') && candidates[r][c].has(num)) {
+                                    if (!isInLine && userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given') && calculatedCandidates[r][c].has(num)) {
                                         related.push(cellEl);
                                     }
                                 }
@@ -1725,7 +1730,7 @@ if (hintBtn) {
                                     const isInLine = (c === col);
                                     const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
                                     // 必須實際存在該候選且目前未填，避免浪費提示
-                                    if (!isInLine && userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given') && candidates[r][c].has(num)) {
+                                    if (!isInLine && userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given') && calculatedCandidates[r][c].has(num)) {
                                         related.push(cellEl);
                                     }
                                 }
