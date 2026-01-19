@@ -36,12 +36,3 @@ function initLanguageButtons() {
 
 // 在遊戲初始化時呼叫
 initLanguageButtons();
-
-// ==================== 多語言訊息函數 ====================
-
-// 覆寫 showToast 以支援多語言鍵
-const originalShowToast = showToast;
-function showToast(message, isKey = false) {
-    const displayMessage = isKey ? i18n.t(message) : message;
-    originalShowToast(displayMessage);
-}
