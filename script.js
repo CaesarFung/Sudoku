@@ -353,7 +353,7 @@ function fillUniqueCandidate(row, col) {
 
 // 綁定雙擊／雙點：手機在 touch-action: manipulation 下通常不會產生 dblclick
 function bindUniqueCandidateDoubleActivate(cell, row, col) {
-    const DOUBLE_TAP_MS = 350;
+    const DOUBLE_TAP_MS = 400;
     let lastTapTime = 0;
 
     cell.addEventListener('dblclick', (e) => {
