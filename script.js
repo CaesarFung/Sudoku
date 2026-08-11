@@ -335,6 +335,46 @@ function createPuzzle(targetRemovals, ensureUnique = true, retryCount = 0) {
 }
 
 // --- 介面操作函數 ---
+
+// 若該格筆記只剩一個，填入為答案（桌面 dblclick / 手機雙擊共用）
+function fillUniqueCandidate(row, col) {
+    if (state.gameOver) return false;
+    if (userInput[row][col] !== 0) return false;
+    if (!candidates[row][col] || candidates[row][col].size !== 1) return false;
+
+    selectCell(row, col);
+    const num = Array.from(candidates[row][col])[0];
+    const prevMode = state.candidateMode;
+    state.candidateMode = false;
+    inputNumber(num);
+    state.candidateMode = prevMode;
+    return true;
+}
+
+// 綁定雙擊／雙點：手機在 touch-action: manipulation 下通常不會產生 dblclick
+function bindUniqueCandidateDoubleActivate(cell, row, col) {
+    const DOUBLE_TAP_MS = 400;
+    let lastTapTime = 0;
+
+    cell.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        fillUniqueCandidate(row, col);
+    });
+
+    cell.addEventListener('touchend', (e) => {
+        if (e.changedTouches && e.changedTouches.length > 1) return;
+        const now = Date.now();
+        if (now - lastTapTime <= DOUBLE_TAP_MS) {
+            lastTapTime = 0;
+            // 阻止後續合成 click，並避免部分瀏覽器再派發 dblclick
+            e.preventDefault();
+            fillUniqueCandidate(row, col);
+        } else {
+            lastTapTime = now;
+        }
+    }, { passive: false });
+}
+
 function renderGrid(puzzle) {
     gridContainer.innerHTML = '';
     // 初始化使用者輸入陣列
@@ -379,14 +419,7 @@ function renderGrid(puzzle) {
 
                 cell.appendChild(notesDiv);
                 cell.addEventListener('click', () => selectCell(r, c));
-
-                // Double click 時，如果只有一個候選數字，直接輸入
-                cell.addEventListener('dblclick', () => {
-                    if (candidates[r][c].size === 1) {
-                        const num = Array.from(candidates[r][c])[0];
-                        inputNumber(num);
-                    }
-                });
+                bindUniqueCandidateDoubleActivate(cell, r, c);
             }
 
             gridContainer.appendChild(cell);

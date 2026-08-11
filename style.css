@@ -220,6 +220,8 @@ body {
     background-color: #fff;
     cursor: pointer;
     touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
     color: #1976d2;
     overflow: visible;
     min-width: 0;
@@ -290,6 +292,9 @@ body {
     box-sizing: border-box;
     overflow: visible;
     cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .notes-container.hidden {
