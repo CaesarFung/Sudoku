@@ -1255,6 +1255,31 @@ if (hintBtn) {
             }
         }
 
+        // 若玩家已有筆記：提示改以當時筆記為準（避免叫人刪已唔存在嘅候選）
+        // 若完全冇筆記：先退回用規則推算候選
+        let boardHasNotes = false;
+        for (let r = 0; r < N && !boardHasNotes; r++) {
+            for (let c = 0; c < N; c++) {
+                if (userInput[r][c] === 0 && candidates[r][c] && candidates[r][c].size > 0) {
+                    boardHasNotes = true;
+                    break;
+                }
+            }
+        }
+        if (boardHasNotes) {
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    calculatedCandidates[r][c] = userInput[r][c] !== 0
+                        ? new Set()
+                        : new Set(candidates[r][c] || []);
+                }
+            }
+        }
+
+        // 讀取格子「實際顯示中」的筆記（給刪除有效性檢查用）
+        const cellHasNote = (row, col, num) =>
+            userInput[row][col] === 0 && candidates[row][col] && candidates[row][col].has(num);
+
         // 策略 1: Naked Single - 找出只有一個候選數字的格子
         const nakedSingleCells = [];
         for (let r = 0; r < N; r++) {
@@ -1375,18 +1400,9 @@ if (hintBtn) {
                                 let canEliminate = false;
                                 for (const c of cells) {
                                     if (!group.includes(c)) {
-                                        // 檢查該格實際顯示的候選數字（使用者手動輸入的）
-                                        const cellEl = gridContainer.querySelector(`[data-row="${c.row}"][data-col="${c.col}"]`);
-                                        const actualCandidates = new Set();
-                                        if (cellEl) {
-                                            const candidateEls = cellEl.querySelectorAll('.candidate');
-                                            candidateEls.forEach(el => {
-                                                const num = parseInt(el.textContent);
-                                                if (!isNaN(num)) actualCandidates.add(num);
-                                            });
-                                        }
+                                        // 檢查該格實際顯示的筆記（使用者當時的候選）
                                         for (const n of nums) {
-                                            if (actualCandidates.has(n)) canEliminate = true;
+                                            if (cellHasNote(c.row, c.col, n)) canEliminate = true;
                                         }
                                     }
                                 }
@@ -1420,18 +1436,9 @@ if (hintBtn) {
                                 let canEliminate = false;
                                 for (const c of cells) {
                                     if (!group.includes(c)) {
-                                        // 檢查該格實際顯示的候選數字（使用者手動輸入的）
-                                        const cellEl = gridContainer.querySelector(`[data-row="${c.row}"][data-col="${c.col}"]`);
-                                        const actualCandidates = new Set();
-                                        if (cellEl) {
-                                            const candidateEls = cellEl.querySelectorAll('.candidate');
-                                            candidateEls.forEach(el => {
-                                                const num = parseInt(el.textContent);
-                                                if (!isNaN(num)) actualCandidates.add(num);
-                                            });
-                                        }
+                                        // 檢查該格實際顯示的筆記（使用者當時的候選）
                                         for (const n of nums) {
-                                            if (actualCandidates.has(n)) canEliminate = true;
+                                            if (cellHasNote(c.row, c.col, n)) canEliminate = true;
                                         }
                                     }
                                 }
@@ -1468,18 +1475,9 @@ if (hintBtn) {
                                     let canEliminate = false;
                                     for (const c of cells) {
                                         if (!group.includes(c)) {
-                                            // 檢查該格實際顯示的候選數字（使用者手動輸入的）
-                                            const cellEl = gridContainer.querySelector(`[data-row="${c.row}"][data-col="${c.col}"]`);
-                                            const actualCandidates = new Set();
-                                            if (cellEl) {
-                                                const candidateEls = cellEl.querySelectorAll('.candidate');
-                                                candidateEls.forEach(el => {
-                                                    const num = parseInt(el.textContent);
-                                                    if (!isNaN(num)) actualCandidates.add(num);
-                                                });
-                                            }
+                                            // 檢查該格實際顯示的筆記（使用者當時的候選）
                                             for (const n of nums) {
-                                                if (actualCandidates.has(n)) canEliminate = true;
+                                                if (cellHasNote(c.row, c.col, n)) canEliminate = true;
                                             }
                                         }
                                     }
@@ -1507,18 +1505,21 @@ if (hintBtn) {
                     const cell = gridContainer.querySelector(`[data-row="${row}"][data-col="${col}"]`);
                     if (cell) cell.classList.add('hint-border');
                 }
-                // 標示同區域其他可被刪除的格子
+                // 標示同區域其他「實際有該筆記可刪」的格子
                 let relatedCells = [];
+                const pairHasRemovableNote = (r, c) =>
+                    !nakedPair.cells.some(cell => cell.row === r && cell.col === c) &&
+                    Array.from(nakedPair.nums).some(n => cellHasNote(r, c, n));
                 if (nakedPair.region === 'row') {
                     for (let c = 0; c < N; c++) {
-                        if (!nakedPair.cells.some(cell => cell.row === nakedPair.regionIdx && cell.col === c)) {
+                        if (pairHasRemovableNote(nakedPair.regionIdx, c)) {
                             const cell = gridContainer.querySelector(`[data-row="${nakedPair.regionIdx}"][data-col="${c}"]`);
                             if (cell) relatedCells.push(cell);
                         }
                     }
                 } else if (nakedPair.region === 'col') {
                     for (let r = 0; r < N; r++) {
-                        if (!nakedPair.cells.some(cell => cell.col === nakedPair.regionIdx && cell.row === r)) {
+                        if (pairHasRemovableNote(r, nakedPair.regionIdx)) {
                             const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${nakedPair.regionIdx}"]`);
                             if (cell) relatedCells.push(cell);
                         }
@@ -1528,7 +1529,7 @@ if (hintBtn) {
                     const bc = nakedPair.regionIdx % 3;
                     for (let r = br * 3; r < br * 3 + 3; r++) {
                         for (let c = bc * 3; c < bc * 3 + 3; c++) {
-                            if (!nakedPair.cells.some(cell => cell.row === r && cell.col === c)) {
+                            if (pairHasRemovableNote(r, c)) {
                                 const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
                                 if (cell) relatedCells.push(cell);
                             }
@@ -1559,16 +1560,19 @@ if (hintBtn) {
                     if (cell) cell.classList.add('hint-border');
                 }
                 let relatedCells = [];
+                const tripleHasRemovableNote = (r, c) =>
+                    !nakedTriple.cells.some(cell => cell.row === r && cell.col === c) &&
+                    Array.from(nakedTriple.nums).some(n => cellHasNote(r, c, n));
                 if (nakedTriple.region === 'row') {
                     for (let c = 0; c < N; c++) {
-                        if (!nakedTriple.cells.some(cell => cell.row === nakedTriple.regionIdx && cell.col === c)) {
+                        if (tripleHasRemovableNote(nakedTriple.regionIdx, c)) {
                             const cell = gridContainer.querySelector(`[data-row="${nakedTriple.regionIdx}"][data-col="${c}"]`);
                             if (cell) relatedCells.push(cell);
                         }
                     }
                 } else if (nakedTriple.region === 'col') {
                     for (let r = 0; r < N; r++) {
-                        if (!nakedTriple.cells.some(cell => cell.col === nakedTriple.regionIdx && cell.row === r)) {
+                        if (tripleHasRemovableNote(r, nakedTriple.regionIdx)) {
                             const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${nakedTriple.regionIdx}"]`);
                             if (cell) relatedCells.push(cell);
                         }
@@ -1578,7 +1582,7 @@ if (hintBtn) {
                     const bc = nakedTriple.regionIdx % 3;
                     for (let r = br * 3; r < br * 3 + 3; r++) {
                         for (let c = bc * 3; c < bc * 3 + 3; c++) {
-                            if (!nakedTriple.cells.some(cell => cell.row === r && cell.col === c)) {
+                            if (tripleHasRemovableNote(r, c)) {
                                 const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
                                 if (cell) relatedCells.push(cell);
                             }
@@ -1623,15 +1627,10 @@ if (hintBtn) {
                                     if (c < bc * 3 || c >= bc * 3 + 3) {
                                         const cellEl = gridContainer.querySelector(`[data-row="${positions[0].row}"][data-col="${c}"]`);
                                         if (userInput[positions[0].row][c] === 0 && cellEl && !cellEl.classList.contains('given')) {
-                                            // 檢查該格實際顯示的候選數字
-                                            const candidateEls = cellEl.querySelectorAll('.candidate');
-                                            for (const el of candidateEls) {
-                                                if (parseInt(el.textContent) === num) {
-                                                    canEliminate = true;
-                                                    break;
-                                                }
+                                            if (cellHasNote(positions[0].row, c, num)) {
+                                                canEliminate = true;
+                                                break;
                                             }
-                                            if (canEliminate) break;
                                         }
                                     }
                                 }
@@ -1646,7 +1645,7 @@ if (hintBtn) {
                                     for (let c = 0; c < N; c++) {
                                         if (c < bc * 3 || c >= bc * 3 + 3) {
                                             const cell = gridContainer.querySelector(`[data-row="${positions[0].row}"][data-col="${c}"]`);
-                                            if (cell && userInput[positions[0].row][c] === 0 && calculatedCandidates[positions[0].row][c].has(num)) {
+                                            if (cell && cellHasNote(positions[0].row, c, num)) {
                                                 relatedCells.push(cell);
                                             }
                                         }
@@ -1669,15 +1668,10 @@ if (hintBtn) {
                                     if (r < br * 3 || r >= br * 3 + 3) {
                                         const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${positions[0].col}"]`);
                                         if (userInput[r][positions[0].col] === 0 && cellEl && !cellEl.classList.contains('given')) {
-                                            // 檢查該格實際顯示的候選數字
-                                            const candidateEls = cellEl.querySelectorAll('.candidate');
-                                            for (const el of candidateEls) {
-                                                if (parseInt(el.textContent) === num) {
-                                                    canEliminate = true;
-                                                    break;
-                                                }
+                                            if (cellHasNote(r, positions[0].col, num)) {
+                                                canEliminate = true;
+                                                break;
                                             }
-                                            if (canEliminate) break;
                                         }
                                     }
                                 }
@@ -1690,7 +1684,7 @@ if (hintBtn) {
                                     for (let r = 0; r < N; r++) {
                                         if (r < br * 3 || r >= br * 3 + 3) {
                                             const cell = gridContainer.querySelector(`[data-row="${r}"][data-col="${positions[0].col}"]`);
-                                            if (cell && userInput[r][positions[0].col] === 0 && calculatedCandidates[r][positions[0].col].has(num)) {
+                                            if (cell && cellHasNote(r, positions[0].col, num)) {
                                                 relatedCells.push(cell);
                                             }
                                         }
@@ -1736,7 +1730,7 @@ if (hintBtn) {
                                     const isInLine = (r === row);
                                     const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
                                     // 必須實際存在該候選且目前未填，避免浪費提示
-                                    if (!isInLine && userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given') && calculatedCandidates[r][c].has(num)) {
+                                    if (!isInLine && cellEl && !cellEl.classList.contains('given') && cellHasNote(r, c, num)) {
                                         related.push(cellEl);
                                     }
                                 }
@@ -1782,7 +1776,7 @@ if (hintBtn) {
                                     const isInLine = (c === col);
                                     const cellEl = gridContainer.querySelector(`[data-row="${r}"][data-col="${c}"]`);
                                     // 必須實際存在該候選且目前未填，避免浪費提示
-                                    if (!isInLine && userInput[r][c] === 0 && cellEl && !cellEl.classList.contains('given') && calculatedCandidates[r][c].has(num)) {
+                                    if (!isInLine && cellEl && !cellEl.classList.contains('given') && cellHasNote(r, c, num)) {
                                         related.push(cellEl);
                                     }
                                 }
