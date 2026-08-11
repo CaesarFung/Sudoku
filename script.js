@@ -351,26 +351,45 @@ function fillUniqueCandidate(row, col) {
     return true;
 }
 
-// 綁定雙擊／雙點：手機在 touch-action: manipulation 下通常不會產生 dblclick
+// 綁定雙擊／再點填入唯一筆記
+// iOS Safari 常不派發 dblclick，且 touchend 雙點也不穩定；
+// 最可靠：對「已選中且只剩一個筆記」的格子再點一次即可填入。
 function bindUniqueCandidateDoubleActivate(cell, row, col) {
-    const DOUBLE_TAP_MS = 400;
-    let lastTapTime = 0;
+    const DOUBLE_TAP_MS = 600;
+    let lastTouchTime = 0;
 
     cell.addEventListener('dblclick', (e) => {
         e.preventDefault();
         fillUniqueCandidate(row, col);
     });
 
-    cell.addEventListener('touchend', (e) => {
-        if (e.changedTouches && e.changedTouches.length > 1) return;
-        const now = Date.now();
-        if (now - lastTapTime <= DOUBLE_TAP_MS) {
-            lastTapTime = 0;
-            // 阻止後續合成 click，並避免部分瀏覽器再派發 dblclick
-            e.preventDefault();
+    cell.addEventListener('click', () => {
+        const alreadySelected =
+            state.selectedCell &&
+            state.selectedCell.row === row &&
+            state.selectedCell.col === col &&
+            userInput[row][col] === 0;
+
+        // 已選中且唯一筆記：再點一次＝確認填入（iOS 雙點的可靠替代）
+        if (alreadySelected && candidates[row][col].size === 1) {
             fillUniqueCandidate(row, col);
+            return;
+        }
+        selectCell(row, col);
+    });
+
+    // 備援：部分 iOS 雙點會吃掉第二次 click，改在第二次 touchend 填入
+    cell.addEventListener('touchend', (e) => {
+        if (e.touches && e.touches.length > 0) return;
+        const now = Date.now();
+        if (now - lastTouchTime <= DOUBLE_TAP_MS) {
+            lastTouchTime = 0;
+            if (candidates[row][col].size === 1 && userInput[row][col] === 0) {
+                e.preventDefault();
+                fillUniqueCandidate(row, col);
+            }
         } else {
-            lastTapTime = now;
+            lastTouchTime = now;
         }
     }, { passive: false });
 }
@@ -418,7 +437,7 @@ function renderGrid(puzzle) {
                 }
 
                 cell.appendChild(notesDiv);
-                cell.addEventListener('click', () => selectCell(r, c));
+                // click 選格／再點填入 由 bindUniqueCandidateDoubleActivate 統一處理
                 bindUniqueCandidateDoubleActivate(cell, r, c);
             }
 
